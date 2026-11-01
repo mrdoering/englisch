@@ -79,6 +79,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
 .chip .t{font-weight:800}
 .chip .s{font-family:var(--hand);font-size:18px;color:var(--dim)}
 .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.seg.seg2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .seg button{font-size:17px;font-weight:800;padding:12px;border-radius:12px;border:2px solid var(--faint);background:transparent;color:var(--chalk)}
 .seg button[aria-pressed="true"]{background:var(--chalk);color:var(--board);border-color:var(--chalk)}
 
@@ -90,6 +91,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
 .mist .forms{font-family:var(--hand);font-size:22px}
 .mist .de{color:var(--dim);font-size:15px}
 
+.nojs{margin:0;border:2px solid var(--bad);border-radius:14px;padding:12px 14px;font-weight:700;line-height:1.5;color:var(--bad)}
 .wiggle{animation:wig .45s ease}
 @keyframes wig{25%{transform:rotate(-2deg)}75%{transform:rotate(2deg)}}
 @media (prefers-reduced-motion:reduce){.wiggle{animation:none}.bar>div{transition:none}}
@@ -98,12 +100,18 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
 </head>
 <body>
 <main class="app">
+  <p class="nojs" id="nojs">Hier läuft die App nicht, weil diese Vorschau kein JavaScript ausführt. Bitte den Link in Safari öffnen.</p>
 
   <!-- START -->
   <section class="screen" id="s-start">
     <div class="top">
       <h1>Irregular Verbs</h1>
       <span class="pill" id="best-pill">Rekord 0</span>
+    </div>
+    <div class="label">Vergangenheitsformen (Past)</div>
+    <div class="seg seg2" id="seg-past">
+      <button type="button" data-past="1">Ja</button>
+      <button type="button" data-past="0">Nein</button>
     </div>
     <p class="muted" id="start-info">Deutsch sehen, alle drei englischen Formen schreiben.</p>
 
@@ -186,6 +194,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
 
 <script>
 (function(){
+  document.getElementById("nojs").remove();
   // [Deutsch, Infinitive, Simple past, Past participle, Gruppe]
   const GROUPS = [
     {id:1, t:"Alle drei gleich", s:"cut – cut – cut", tip:"Bei diesen Verben bleibt <b>alles gleich</b>.", ex:"put – put – put"},
@@ -229,6 +238,8 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
   let stats = load("vt-stats",{});        // {inf:{r,w}}
   let settings = load("vt-settings",{groups:[1,2,3,4,5,6],n:10});
   let best = load("vt-best",0);
+  if(typeof settings.past!=="boolean") settings.past = false;
+  const sk = v => settings.past ? v[1] : v[1]+"#inf"; // Statistik getrennt je Modus
 
   const $ = id=>document.getElementById(id);
   const screens = {start:$("s-start"),quiz:$("s-quiz"),end:$("s-end")};
@@ -245,16 +256,21 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
   $("groups").addEventListener("change",()=>{
     settings.groups = GROUPS.map(g=>g.id).filter(id=>$("g"+id).checked); save("vt-settings",settings); refreshStart();
   });
+  $("seg-past").addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    settings.past = b.dataset.past==="1"; save("vt-settings",settings); refreshStart();
+  });
   $("seg").addEventListener("click",e=>{
     const b=e.target.closest("button"); if(!b) return;
     settings.n = +b.dataset.n; save("vt-settings",settings); refreshStart();
   });
   function hardList(){
-    return VERBS.filter(v=>stats[v[1]] && stats[v[1]].w>0)
-      .sort((a,b)=>(stats[b[1]].w-stats[b[1]].r*.5)-(stats[a[1]].w-stats[a[1]].r*.5));
+    return VERBS.filter(v=>stats[sk(v)] && stats[sk(v)].w>0)
+      .sort((a,b)=>(stats[sk(b)].w-stats[sk(b)].r*.5)-(stats[sk(a)].w-stats[sk(a)].r*.5));
   }
   function refreshStart(){
     [...$("seg").children].forEach(b=>b.setAttribute("aria-pressed", +b.dataset.n===settings.n));
+    [...$("seg-past").children].forEach(b=>b.setAttribute("aria-pressed", (b.dataset.past==="1")===settings.past));
     const pool = VERBS.filter(v=>settings.groups.includes(v[4])).length;
     $("go").disabled = pool===0;
     $("go").textContent = pool===0 ? "Bitte eine Gruppe wählen" : `Los geht's · ${settings.n && settings.n<pool ? settings.n : pool} Verben`;
@@ -262,19 +278,20 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
     $("go-hard").hidden = hard.length===0;
     $("go-hard").textContent = `Meine schwierigen Verben üben · ${Math.min(hard.length,15)}`;
     $("best-pill").textContent = "★ Rekord " + best;
-    const seen = Object.keys(stats).length;
-    $("start-info").textContent = seen
-      ? `Du hast schon ${seen} von ${VERBS.length} Verben geübt. Deutsch sehen, alle drei englischen Formen schreiben.`
-      : "Du siehst das deutsche Wort und schreibst alle drei englischen Formen.";
+    const seen = VERBS.filter(v=>stats[sk(v)]).length;
+    const what = settings.past ? "alle drei englischen Formen" : "das englische Verb";
+    $("start-info").textContent = (seen ? `Schon ${seen} von ${VERBS.length} Verben geübt. ` : "")
+      + `Du siehst das deutsche Wort und schreibst ${what}.`;
   }
 
   // ---------- quiz ----------
   const shuffle = a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
   let queue=[], total=0, pos=0, firstRight=0, streak=0, maxStreak=0, mistakes=[], requeued=new Set(), cur=null, checked=false, tipLevel=0, roundName="";
   const inputs=[$("i0"),$("i1"),$("i2")], fields=[$("f0"),$("f1"),$("f2")];
+  let past = false;
 
   function startRound(list,name){
-    queue = list; total = list.length; pos = 0; firstRight = 0; streak = 0; maxStreak = 0;
+    past = settings.past; queue = list; total = list.length; pos = 0; firstRight = 0; streak = 0; maxStreak = 0;
     mistakes = []; requeued = new Set(); roundName = name;
     show("quiz"); next();
   }
@@ -299,7 +316,9 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
     cur = queue.shift(); checked=false; tipLevel=0;
     $("de").textContent = cur[0];
     fields.forEach((f,i)=>{f.className="field"; inputs[i].value=""; inputs[i].placeholder=""; inputs[i].readOnly=false; f.querySelector(".fix").hidden=true});
-    $("tip").hidden = true; $("hint").hidden=false; $("hint").textContent="Tipp anzeigen";
+    fields[1].hidden = fields[2].hidden = !past;
+    inputs[0].enterKeyHint = past ? "next" : "done";
+    $("tip").hidden = true; $("hint").hidden=false; $("hint").textContent = past ? "Tipp anzeigen" : "Anfangsbuchstaben zeigen";
     $("check").textContent = "Prüfen";
     $("round-name").textContent = roundName + (requeued.has(cur[1]) && pos>=total ? " · Wiederholung" : "");
     const shown = Math.min(pos+1,total);
@@ -319,7 +338,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
   function doCheck(){
     if(checked){ stopTimer(); pos++; return next(); }
     checked = true;
-    const correct=[cur[1],cur[2],cur[3]];
+    const correct = past ? [cur[1],cur[2],cur[3]] : [cur[1]];
     let all=true;
     correct.forEach((c,i)=>{
       const ok = okFor(inputs[i].value,c);
@@ -328,9 +347,9 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
       const fix = fields[i].querySelector(".fix");
       if(!ok){ all=false; fix.textContent = "richtig: " + c.replace("/"," / "); fix.hidden=false; if(!inputs[i].value) inputs[i].value="–"; }
     });
-    const s = stats[cur[1]] || {r:0,w:0};
+    const s = stats[sk(cur)] || {r:0,w:0};
     if(all){ s.r++; } else { s.w++; }
-    stats[cur[1]] = s; save("vt-stats",stats);
+    stats[sk(cur)] = s; save("vt-stats",stats);
 
     const firstTry = !requeued.has(cur[1]);
     if(all){
@@ -341,7 +360,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
     } else {
       streak = 0;
       if(firstTry){ mistakes.push(cur); requeued.add(cur[1]); queue.push(cur); }
-      showTip(1);
+      if(past) showTip(1);
     }
     $("streak").textContent = `★ ${streak} in Folge`;
     $("hint").hidden = true;
@@ -359,7 +378,9 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
     }
   }
   $("hint").addEventListener("click",()=>{
-    tipLevel++; showTip(tipLevel);
+    tipLevel++;
+    if(!past){ tipLevel=2; if(!inputs[0].value) inputs[0].placeholder = cur[1][0]+" …"; $("hint").hidden=true; return; }
+    showTip(tipLevel);
     if(tipLevel===1) $("hint").textContent="Anfangsbuchstaben zeigen";
     else $("hint").hidden=true;
   });
@@ -367,7 +388,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
   inputs.forEach((inp,i)=>inp.addEventListener("keydown",e=>{
     if(e.key!=="Enter") return; e.preventDefault();
     if(checked) return doCheck();
-    if(i<2) inputs[i+1].focus(); else doCheck();
+    if(past && i<2) inputs[i+1].focus(); else doCheck();
   }));
 
   // ---------- end ----------
@@ -376,7 +397,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
     $("end-score").textContent = `${firstRight} / ${total}`;
     $("end-text").textContent = firstRight===total ? "Alles beim ersten Versuch richtig!" : "beim ersten Versuch richtig";
     $("end-streak").textContent = `★ ${maxStreak} in Folge`;
-    $("mist").innerHTML = mistakes.map(v=>`<li><span class="forms">${v[1]} – ${v[2].replace("/"," / ")} – ${v[3]}</span><span class="de">${v[0]}</span></li>`).join("");
+    $("mist").innerHTML = mistakes.map(v=>`<li><span class="forms">${past ? v[1]+" – "+v[2].replace("/"," / ")+" – "+v[3] : v[1]}</span><span class="de">${v[0]}</span></li>`).join("");
     $("mist-label").hidden = $("again-wrong").hidden = mistakes.length===0;
     show("end");
   }
