@@ -108,7 +108,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
       <h1>Irregular Verbs</h1>
       <span class="pill" id="best-pill">Rekord 0</span>
     </div>
-    <div class="label">Vergangenheitsformen (Past)</div>
+    <div class="label">Past Participle (3. Form)</div>
     <div class="seg seg2" id="seg-past">
       <button type="button" data-past="1">Ja</button>
       <button type="button" data-past="0">Nein</button>
@@ -239,7 +239,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
   let settings = load("vt-settings",{groups:[1,2,3,4,5,6],n:10});
   let best = load("vt-best",0);
   if(typeof settings.past!=="boolean") settings.past = false;
-  const sk = v => settings.past ? v[1] : v[1]+"#inf"; // Statistik getrennt je Modus
+  const sk = v => settings.past ? v[1] : v[1]+"#2"; // Statistik getrennt je Modus
 
   const $ = id=>document.getElementById(id);
   const screens = {start:$("s-start"),quiz:$("s-quiz"),end:$("s-end")};
@@ -279,7 +279,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
     $("go-hard").textContent = `Meine schwierigen Verben üben · ${Math.min(hard.length,15)}`;
     $("best-pill").textContent = "★ Rekord " + best;
     const seen = VERBS.filter(v=>stats[sk(v)]).length;
-    const what = settings.past ? "alle drei englischen Formen" : "das englische Verb";
+    const what = settings.past ? "alle drei englischen Formen" : "Infinitive und Simple past";
     $("start-info").textContent = (seen ? `Schon ${seen} von ${VERBS.length} Verben geübt. ` : "")
       + `Du siehst das deutsche Wort und schreibst ${what}.`;
   }
@@ -316,9 +316,9 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
     cur = queue.shift(); checked=false; tipLevel=0;
     $("de").textContent = cur[0];
     fields.forEach((f,i)=>{f.className="field"; inputs[i].value=""; inputs[i].placeholder=""; inputs[i].readOnly=false; f.querySelector(".fix").hidden=true});
-    fields[1].hidden = fields[2].hidden = !past;
-    inputs[0].enterKeyHint = past ? "next" : "done";
-    $("tip").hidden = true; $("hint").hidden=false; $("hint").textContent = past ? "Tipp anzeigen" : "Anfangsbuchstaben zeigen";
+    fields[2].hidden = !past;
+    inputs[1].enterKeyHint = past ? "next" : "done";
+    $("tip").hidden = true; $("hint").hidden=false; $("hint").textContent = "Tipp anzeigen";
     $("check").textContent = "Prüfen";
     $("round-name").textContent = roundName + (requeued.has(cur[1]) && pos>=total ? " · Wiederholung" : "");
     const shown = Math.min(pos+1,total);
@@ -338,7 +338,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
   function doCheck(){
     if(checked){ stopTimer(); pos++; return next(); }
     checked = true;
-    const correct = past ? [cur[1],cur[2],cur[3]] : [cur[1]];
+    const correct = past ? [cur[1],cur[2],cur[3]] : [cur[1],cur[2]];
     let all=true;
     correct.forEach((c,i)=>{
       const ok = okFor(inputs[i].value,c);
@@ -360,7 +360,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
     } else {
       streak = 0;
       if(firstTry){ mistakes.push(cur); requeued.add(cur[1]); queue.push(cur); }
-      if(past) showTip(1);
+      showTip(1);
     }
     $("streak").textContent = `★ ${streak} in Folge`;
     $("hint").hidden = true;
@@ -371,16 +371,14 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
 
   function showTip(level){
     const g = GROUPS.find(x=>x.id===cur[4]);
-    $("tip").innerHTML = `<b>Merkhilfe:</b> ${g.tip}<br><span class="ex">${g.ex}</span>`;
+    $("tip").innerHTML = `<b>Merkhilfe:</b> ${g.tip}<br><span class="ex">${past ? g.ex : g.ex.split(" – ").slice(0,2).join(" – ")}</span>`;
     $("tip").hidden=false;
     if(level>=2){
       [cur[1],cur[2],cur[3]].forEach((c,i)=>{ if(!inputs[i].value) inputs[i].placeholder = c[0]+" …"; });
     }
   }
   $("hint").addEventListener("click",()=>{
-    tipLevel++;
-    if(!past){ tipLevel=2; if(!inputs[0].value) inputs[0].placeholder = cur[1][0]+" …"; $("hint").hidden=true; return; }
-    showTip(tipLevel);
+    tipLevel++; showTip(tipLevel);
     if(tipLevel===1) $("hint").textContent="Anfangsbuchstaben zeigen";
     else $("hint").hidden=true;
   });
@@ -388,7 +386,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
   inputs.forEach((inp,i)=>inp.addEventListener("keydown",e=>{
     if(e.key!=="Enter") return; e.preventDefault();
     if(checked) return doCheck();
-    if(past && i<2) inputs[i+1].focus(); else doCheck();
+    if(i < (past ? 2 : 1)) inputs[i+1].focus(); else doCheck();
   }));
 
   // ---------- end ----------
@@ -397,7 +395,7 @@ button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-
     $("end-score").textContent = `${firstRight} / ${total}`;
     $("end-text").textContent = firstRight===total ? "Alles beim ersten Versuch richtig!" : "beim ersten Versuch richtig";
     $("end-streak").textContent = `★ ${maxStreak} in Folge`;
-    $("mist").innerHTML = mistakes.map(v=>`<li><span class="forms">${past ? v[1]+" – "+v[2].replace("/"," / ")+" – "+v[3] : v[1]}</span><span class="de">${v[0]}</span></li>`).join("");
+    $("mist").innerHTML = mistakes.map(v=>`<li><span class="forms">${v[1]+" – "+v[2].replace("/"," / ")+(past ? " – "+v[3] : "")}</span><span class="de">${v[0]}</span></li>`).join("");
     $("mist-label").hidden = $("again-wrong").hidden = mistakes.length===0;
     show("end");
   }
