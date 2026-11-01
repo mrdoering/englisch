@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;height:100%}
+body{margin:0}
+[hidden]{display:none!important}
+</style>
+<title>Irregular Verbs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: one column chalkboard app in a wooden frame, phone first; header, card with three answer lines, actions pinned at the bottom */
+:root{
+  --wood:#7A5230; --wood-dark:#5C3B20;
+  --board:#1E3A2F; --board-2:#24453A;
+  --chalk:#F1F5EC; --dim:#C9D6C3; --faint:rgba(241,245,236,.18);
+  --yellow:#F5D547; --good:#9BE7A8; --bad:#FFA08F;
+  --hand:'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive;
+  --ui:'Nunito',system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--board);color:var(--chalk);font-family:var(--ui);font-size:16px;-webkit-font-smoothing:antialiased}
+body::after{content:"";position:fixed;inset:0;border:8px solid var(--wood);box-shadow:inset 0 0 0 2px var(--wood-dark);pointer-events:none;z-index:5}
+.app{box-sizing:border-box;min-height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:18px;
+  padding-block:24px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.screen{display:flex;flex-direction:column;gap:18px;flex:1}
+h1{font-family:var(--hand);font-weight:400;font-size:32px;margin:0;line-height:1.1;text-wrap:balance}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pill{display:flex;align-items:center;gap:6px;border:2px solid var(--faint);border-radius:999px;padding:5px 12px;font-weight:800;font-size:15px;color:var(--yellow);white-space:nowrap}
+.label{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.muted{color:var(--dim);font-size:15px;line-height:1.5;margin:0}
+
+/* progress */
+.prog{display:flex;flex-direction:column;gap:8px}
+.prog-row{display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--dim);font-variant-numeric:tabular-nums}
+.bar{height:10px;border:2px solid var(--faint);border-radius:999px;overflow:hidden}
+.bar>div{height:100%;width:0;background:var(--yellow);transition:width .3s}
+
+/* card */
+.card{background:var(--board-2);border:2px solid var(--faint);border-radius:22px;padding:22px 18px;display:flex;flex-direction:column;gap:18px}
+.word{text-align:center;display:flex;flex-direction:column;gap:2px}
+.word .de{font-family:var(--hand);font-size:50px;line-height:1.1;overflow-wrap:anywhere}
+.field{display:flex;flex-direction:column;gap:4px}
+.field input{font-family:var(--hand);font-size:28px;color:var(--chalk);background:rgba(241,245,236,.06);border:none;border-bottom:3px dashed rgba(241,245,236,.45);border-radius:10px 10px 0 0;padding:8px 12px;outline:none;width:100%;box-sizing:border-box}
+.field input:focus{border-bottom:3px solid var(--yellow);background:rgba(245,213,71,.08)}
+.field input::placeholder{color:rgba(241,245,236,.4)}
+.field.ok input{border-bottom:3px solid var(--good);color:var(--good)}
+.field.no input{border-bottom:3px solid var(--bad);color:var(--bad);text-decoration:line-through;text-decoration-thickness:2px}
+.fix{font-family:var(--hand);font-size:24px;color:var(--good);padding-left:12px}
+.tip{border:2px dashed rgba(241,245,236,.35);border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.5;color:var(--dim)}
+.tip b{color:var(--yellow)}
+.tip .ex{font-family:var(--hand);font-size:20px;color:var(--chalk)}
+
+/* buttons */
+.actions{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+button{font-family:var(--ui);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn{font-size:19px;font-weight:800;border-radius:16px;padding:16px;border:none;background:var(--yellow);color:var(--board);box-shadow:0 4px 0 #B89A1E}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #B89A1E}
+.btn{position:relative;overflow:hidden}
+.btn.timing::after{content:"";position:absolute;left:0;bottom:0;height:5px;width:0;background:rgba(30,58,47,.5);animation:fillbar var(--dur,1s) linear forwards}
+@keyframes fillbar{to{width:100%}}
+.btn-ghost{font-size:16px;font-weight:700;border-radius:16px;padding:13px;background:transparent;color:var(--chalk);border:2px solid rgba(241,245,236,.4)}
+button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-offset:2px}
+
+/* start screen */
+.group-list{display:flex;flex-direction:column;gap:8px}
+.chip{display:flex;align-items:center;gap:12px;border:2px solid var(--faint);border-radius:14px;padding:12px 14px;cursor:pointer}
+.chip input{position:absolute;opacity:0;width:1px;height:1px}
+.chip .box{flex:none;width:24px;height:24px;border:2px solid var(--dim);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.chip .box svg{opacity:0}
+.chip input:checked ~ .box{background:var(--yellow);border-color:var(--yellow)}
+.chip input:checked ~ .box svg{opacity:1}
+.chip .txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.chip .t{font-weight:800}
+.chip .s{font-family:var(--hand);font-size:18px;color:var(--dim)}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.seg button{font-size:17px;font-weight:800;padding:12px;border-radius:12px;border:2px solid var(--faint);background:transparent;color:var(--chalk)}
+.seg button[aria-pressed="true"]{background:var(--chalk);color:var(--board);border-color:var(--chalk)}
+
+/* end screen */
+.score{text-align:center;display:flex;flex-direction:column;gap:4px;padding:10px 0}
+.score .big{font-family:var(--hand);font-size:72px;line-height:1;color:var(--yellow);font-variant-numeric:tabular-nums}
+.mist{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.mist li{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--faint);padding:8px 2px;flex-wrap:wrap}
+.mist .forms{font-family:var(--hand);font-size:22px}
+.mist .de{color:var(--dim);font-size:15px}
+
+.wiggle{animation:wig .45s ease}
+@keyframes wig{25%{transform:rotate(-2deg)}75%{transform:rotate(2deg)}}
+@media (prefers-reduced-motion:reduce){.wiggle{animation:none}.bar>div{transition:none}}
+</style>
+
+</head>
+<body>
+<main class="app">
+
+  <!-- START -->
+  <section class="screen" id="s-start">
+    <div class="top">
+      <h1>Irregular Verbs</h1>
+      <span class="pill" id="best-pill">Rekord 0</span>
+    </div>
+    <p class="muted" id="start-info">Deutsch sehen, alle drei englischen Formen schreiben.</p>
+
+    <div class="label">Welche Verben?</div>
+    <div class="group-list" id="groups"></div>
+
+    <div class="label">Wie viele pro Runde?</div>
+    <div class="seg" id="seg">
+      <button type="button" data-n="10">10</button>
+      <button type="button" data-n="20">20</button>
+      <button type="button" data-n="0">Alle</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="go" type="button">Los geht's</button>
+      <button class="btn-ghost" id="go-hard" type="button" hidden>Meine schwierigen Verben üben</button>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="screen" id="s-quiz" hidden>
+    <div class="top">
+      <h1>Irregular Verbs</h1>
+      <span class="pill" id="streak">★ 0 in Folge</span>
+    </div>
+    <div class="prog">
+      <div class="prog-row"><span id="round-name">Runde</span><span id="count">1 / 10</span></div>
+      <div class="bar"><div id="bar"></div></div>
+    </div>
+
+    <div class="card" id="card">
+      <div class="word">
+        <span class="label">Was heißt …</span>
+        <span class="de" id="de">gehen</span>
+      </div>
+      <div class="field" id="f0">
+        <label class="label" for="i0">Infinitive</label>
+        <input id="i0" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next">
+        <span class="fix" hidden></span>
+      </div>
+      <div class="field" id="f1">
+        <label class="label" for="i1">Simple past</label>
+        <input id="i1" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next">
+        <span class="fix" hidden></span>
+      </div>
+      <div class="field" id="f2">
+        <label class="label" for="i2">Past participle</label>
+        <input id="i2" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done">
+        <span class="fix" hidden></span>
+      </div>
+    </div>
+
+    <div class="tip" id="tip" hidden></div>
+
+    <div class="actions">
+      <button class="btn" id="check" type="button">Prüfen</button>
+      <button class="btn-ghost" id="hint" type="button">Tipp anzeigen</button>
+    </div>
+  </section>
+
+  <!-- END -->
+  <section class="screen" id="s-end" hidden>
+    <div class="top">
+      <h1>Runde geschafft</h1>
+      <span class="pill" id="end-streak">★ 0</span>
+    </div>
+    <div class="score">
+      <span class="big" id="end-score">0 / 0</span>
+      <span class="muted" id="end-text">richtig beim ersten Versuch</span>
+    </div>
+    <div class="label" id="mist-label">Diese Verben nochmal anschauen</div>
+    <ul class="mist" id="mist"></ul>
+    <div class="actions">
+      <button class="btn" id="again-wrong" type="button">Fehler nochmal üben</button>
+      <button class="btn-ghost" id="again" type="button">Zurück zum Start</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  // [Deutsch, Infinitive, Simple past, Past participle, Gruppe]
+  const GROUPS = [
+    {id:1, t:"Alle drei gleich", s:"cut – cut – cut", tip:"Bei diesen Verben bleibt <b>alles gleich</b>.", ex:"put – put – put"},
+    {id:2, t:"-ought / -aught", s:"bring – brought – brought", tip:"2. und 3. Form enden auf <b>-ought</b> oder <b>-aught</b>.", ex:"buy – bought – bought"},
+    {id:3, t:"2. = 3. Form", s:"sleep – slept – slept", tip:"<b>Simple past und past participle sind gleich.</b>", ex:"tell – told – told"},
+    {id:4, t:"1. = 3. Form", s:"come – came – come", tip:"<b>1. und 3. Form sind gleich</b>, nur die Mitte ändert sich.", ex:"run – ran – run"},
+    {id:5, t:"i – a – u", s:"sing – sang – sung", tip:"Der Vokal wandert: <b>i – a – u</b>.", ex:"drink – drank – drunk"},
+    {id:6, t:"Alle drei verschieden", s:"write – wrote – written", tip:"Alle drei Formen sind anders. Die 3. Form endet oft auf <b>-n</b> oder <b>-en</b>.", ex:"take – took – taken"}
+  ];
+  const VERBS = [
+    ["schneiden","cut","cut","cut",1],["schlagen","hit","hit","hit",1],["lassen","let","let","let",1],
+    ["legen, stellen","put","put","put",1],["setzen, festlegen","set","set","set",1],["schließen","shut","shut","shut",1],
+    ["kosten","cost","cost","cost",1],["wehtun, verletzen","hurt","hurt","hurt",1],
+    ["bringen","bring","brought","brought",2],["kaufen","buy","bought","bought",2],["fangen","catch","caught","caught",2],
+    ["kämpfen","fight","fought","fought",2],["unterrichten","teach","taught","taught",2],["denken","think","thought","thought",2],
+    ["bauen","build","built","built",3],["fühlen","feel","felt","felt",3],["finden","find","found","found",3],
+    ["bekommen","get","got","got",3],["haben","have","had","had",3],["hören","hear","heard","heard",3],
+    ["halten","hold","held","held",3],["behalten","keep","kept","kept",3],["verlassen, weggehen","leave","left","left",3],
+    ["verlieren","lose","lost","lost",3],["machen, herstellen","make","made","made",3],["(sich) treffen","meet","met","met",3],
+    ["bezahlen","pay","paid","paid",3],["lesen","read","read","read",3],["sagen","say","said","said",3],
+    ["verkaufen","sell","sold","sold",3],["schicken","send","sent","sent",3],["sitzen","sit","sat","sat",3],
+    ["schlafen","sleep","slept","slept",3],["ausgeben, verbringen","spend","spent","spent",3],["stehen","stand","stood","stood",3],
+    ["erzählen","tell","told","told",3],["verstehen","understand","understood","understood",3],["gewinnen","win","won","won",3],
+    ["kommen","come","came","come",4],["werden","become","became","become",4],["rennen","run","ran","run",4],
+    ["beginnen","begin","began","begun",5],["trinken","drink","drank","drunk",5],["klingeln","ring","rang","rung",5],
+    ["singen","sing","sang","sung",5],["schwimmen","swim","swam","swum",5],
+    ["sein","be","was/were","been",6],["(zer)brechen","break","broke","broken",6],["(aus)wählen","choose","chose","chosen",6],
+    ["tun","do","did","done",6],["zeichnen","draw","drew","drawn",6],["(Auto) fahren","drive","drove","driven",6],
+    ["essen","eat","ate","eaten",6],["fallen","fall","fell","fallen",6],["fliegen","fly","flew","flown",6],
+    ["vergessen","forget","forgot","forgotten",6],["geben","give","gave","given",6],["gehen","go","went","gone",6],
+    ["wachsen","grow","grew","grown",6],["(sich) verstecken","hide","hid","hidden",6],["wissen, kennen","know","knew","known",6],
+    ["reiten, (Rad) fahren","ride","rode","ridden",6],["sehen","see","saw","seen",6],["sprechen","speak","spoke","spoken",6],
+    ["stehlen","steal","stole","stolen",6],["nehmen","take","took","taken",6],["werfen","throw","threw","thrown",6],
+    ["aufwachen","wake","woke","woken",6],["tragen (Kleidung)","wear","wore","worn",6],["schreiben","write","wrote","written",6]
+  ];
+  const EXTRA = { "got":["gotten"] }; // amerikanische Form beim Partizip zulassen
+
+  // storage (nur Komfort, darf fehlen)
+  const load = (k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+  const save = (k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+  let stats = load("vt-stats",{});        // {inf:{r,w}}
+  let settings = load("vt-settings",{groups:[1,2,3,4,5,6],n:10});
+  let best = load("vt-best",0);
+
+  const $ = id=>document.getElementById(id);
+  const screens = {start:$("s-start"),quiz:$("s-quiz"),end:$("s-end")};
+  function show(name){for(const k in screens) screens[k].hidden = k!==name; window.scrollTo(0,0)}
+
+  // ---------- start screen ----------
+  const check = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E3A2F" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+  $("groups").innerHTML = GROUPS.map(g=>{
+    const n = VERBS.filter(v=>v[4]===g.id).length;
+    return `<label class="chip"><input type="checkbox" id="g${g.id}" value="${g.id}"><span class="box">${check}</span>
+      <span class="txt"><span class="t">${g.t} · ${n}</span><span class="s">${g.s}</span></span></label>`;
+  }).join("");
+  GROUPS.forEach(g=>{$("g"+g.id).checked = settings.groups.includes(g.id)});
+  $("groups").addEventListener("change",()=>{
+    settings.groups = GROUPS.map(g=>g.id).filter(id=>$("g"+id).checked); save("vt-settings",settings); refreshStart();
+  });
+  $("seg").addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    settings.n = +b.dataset.n; save("vt-settings",settings); refreshStart();
+  });
+  function hardList(){
+    return VERBS.filter(v=>stats[v[1]] && stats[v[1]].w>0)
+      .sort((a,b)=>(stats[b[1]].w-stats[b[1]].r*.5)-(stats[a[1]].w-stats[a[1]].r*.5));
+  }
+  function refreshStart(){
+    [...$("seg").children].forEach(b=>b.setAttribute("aria-pressed", +b.dataset.n===settings.n));
+    const pool = VERBS.filter(v=>settings.groups.includes(v[4])).length;
+    $("go").disabled = pool===0;
+    $("go").textContent = pool===0 ? "Bitte eine Gruppe wählen" : `Los geht's · ${settings.n && settings.n<pool ? settings.n : pool} Verben`;
+    const hard = hardList();
+    $("go-hard").hidden = hard.length===0;
+    $("go-hard").textContent = `Meine schwierigen Verben üben · ${Math.min(hard.length,15)}`;
+    $("best-pill").textContent = "★ Rekord " + best;
+    const seen = Object.keys(stats).length;
+    $("start-info").textContent = seen
+      ? `Du hast schon ${seen} von ${VERBS.length} Verben geübt. Deutsch sehen, alle drei englischen Formen schreiben.`
+      : "Du siehst das deutsche Wort und schreibst alle drei englischen Formen.";
+  }
+
+  // ---------- quiz ----------
+  const shuffle = a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+  let queue=[], total=0, pos=0, firstRight=0, streak=0, maxStreak=0, mistakes=[], requeued=new Set(), cur=null, checked=false, tipLevel=0, roundName="";
+  const inputs=[$("i0"),$("i1"),$("i2")], fields=[$("f0"),$("f1"),$("f2")];
+
+  function startRound(list,name){
+    queue = list; total = list.length; pos = 0; firstRight = 0; streak = 0; maxStreak = 0;
+    mistakes = []; requeued = new Set(); roundName = name;
+    show("quiz"); next();
+  }
+  $("go").addEventListener("click",()=>{
+    const pool = shuffle(VERBS.filter(v=>settings.groups.includes(v[4])));
+    startRound(settings.n ? pool.slice(0,settings.n) : pool, "Übungsrunde");
+  });
+  $("go-hard").addEventListener("click",()=>startRound(shuffle(hardList().slice(0,15)),"Schwierige Verben"));
+
+  const DELAY_OK = 1200, DELAY_WRONG = 4000; // ms bis zur nächsten Frage
+  let timer = null;
+  function stopTimer(){ clearTimeout(timer); timer=null; $("check").classList.remove("timing"); }
+  function startTimer(ms){
+    const b=$("check"); b.style.setProperty("--dur", ms+"ms");
+    b.classList.remove("timing"); void b.offsetWidth; b.classList.add("timing");
+    timer = setTimeout(()=>{ stopTimer(); pos++; next(); }, ms);
+  }
+
+  function next(){
+    stopTimer();
+    if(!queue.length){ return finish(); }
+    cur = queue.shift(); checked=false; tipLevel=0;
+    $("de").textContent = cur[0];
+    fields.forEach((f,i)=>{f.className="field"; inputs[i].value=""; inputs[i].placeholder=""; inputs[i].readOnly=false; f.querySelector(".fix").hidden=true});
+    $("tip").hidden = true; $("hint").hidden=false; $("hint").textContent="Tipp anzeigen";
+    $("check").textContent = "Prüfen";
+    $("round-name").textContent = roundName + (requeued.has(cur[1]) && pos>=total ? " · Wiederholung" : "");
+    const shown = Math.min(pos+1,total);
+    $("count").textContent = pos>=total ? "Wiederholung" : `${shown} / ${total}`;
+    $("bar").style.width = (Math.min(pos,total)/total*100)+"%";
+    $("streak").textContent = `★ ${streak} in Folge`;
+    inputs[0].focus({preventScroll:true});
+  }
+
+  const norm = s=>s.toLowerCase().trim().replace(/^to\s+/,"").replace(/\s*(,|\/|\bor\b)\s*/g,"/").replace(/\s+/g," ");
+  function okFor(answer,correct){
+    const a = norm(answer); if(!a) return false;
+    if(correct==="was/were") return ["was","were","was/were","were/was"].includes(a);
+    return a===correct || (EXTRA[correct]||[]).includes(a);
+  }
+
+  function doCheck(){
+    if(checked){ stopTimer(); pos++; return next(); }
+    checked = true;
+    const correct=[cur[1],cur[2],cur[3]];
+    let all=true;
+    correct.forEach((c,i)=>{
+      const ok = okFor(inputs[i].value,c);
+      fields[i].className = "field " + (ok?"ok":"no");
+      inputs[i].readOnly = true;
+      const fix = fields[i].querySelector(".fix");
+      if(!ok){ all=false; fix.textContent = "richtig: " + c.replace("/"," / "); fix.hidden=false; if(!inputs[i].value) inputs[i].value="–"; }
+    });
+    const s = stats[cur[1]] || {r:0,w:0};
+    if(all){ s.r++; } else { s.w++; }
+    stats[cur[1]] = s; save("vt-stats",stats);
+
+    const firstTry = !requeued.has(cur[1]);
+    if(all){
+      if(firstTry && tipLevel===0) firstRight++;
+      streak++; maxStreak=Math.max(maxStreak,streak);
+      if(streak>best){best=streak; save("vt-best",best)}
+      $("card").classList.remove("wiggle"); void $("card").offsetWidth; $("card").classList.add("wiggle");
+    } else {
+      streak = 0;
+      if(firstTry){ mistakes.push(cur); requeued.add(cur[1]); queue.push(cur); }
+      showTip(1);
+    }
+    $("streak").textContent = `★ ${streak} in Folge`;
+    $("hint").hidden = true;
+    $("check").textContent = queue.length ? "Weiter" : "Ergebnis ansehen";
+    $("check").focus({preventScroll:true});
+    startTimer(all ? DELAY_OK : DELAY_WRONG);
+  }
+
+  function showTip(level){
+    const g = GROUPS.find(x=>x.id===cur[4]);
+    $("tip").innerHTML = `<b>Merkhilfe:</b> ${g.tip}<br><span class="ex">${g.ex}</span>`;
+    $("tip").hidden=false;
+    if(level>=2){
+      [cur[1],cur[2],cur[3]].forEach((c,i)=>{ if(!inputs[i].value) inputs[i].placeholder = c[0]+" …"; });
+    }
+  }
+  $("hint").addEventListener("click",()=>{
+    tipLevel++; showTip(tipLevel);
+    if(tipLevel===1) $("hint").textContent="Anfangsbuchstaben zeigen";
+    else $("hint").hidden=true;
+  });
+  $("check").addEventListener("click",doCheck);
+  inputs.forEach((inp,i)=>inp.addEventListener("keydown",e=>{
+    if(e.key!=="Enter") return; e.preventDefault();
+    if(checked) return doCheck();
+    if(i<2) inputs[i+1].focus(); else doCheck();
+  }));
+
+  // ---------- end ----------
+  function finish(){
+    $("bar").style.width="100%";
+    $("end-score").textContent = `${firstRight} / ${total}`;
+    $("end-text").textContent = firstRight===total ? "Alles beim ersten Versuch richtig!" : "beim ersten Versuch richtig";
+    $("end-streak").textContent = `★ ${maxStreak} in Folge`;
+    $("mist").innerHTML = mistakes.map(v=>`<li><span class="forms">${v[1]} – ${v[2].replace("/"," / ")} – ${v[3]}</span><span class="de">${v[0]}</span></li>`).join("");
+    $("mist-label").hidden = $("again-wrong").hidden = mistakes.length===0;
+    show("end");
+  }
+  $("again-wrong").addEventListener("click",()=>startRound(shuffle(mistakes),"Fehler-Runde"));
+  $("again").addEventListener("click",()=>{refreshStart(); show("start")});
+
+  refreshStart();
+})();
+</script>
+
+</body>
+</html>
