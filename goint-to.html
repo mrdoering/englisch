@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>Going-to Future</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: one column chalkboard app in a wooden frame, phone first; header, sentence card with answer buttons or a typing line, feedback, actions at the bottom */
+:root{
+  --wood:#7A5230; --wood-dark:#5C3B20;
+  --board:#1E3A2F; --board-2:#24453A;
+  --chalk:#F1F5EC; --dim:#C9D6C3; --faint:rgba(241,245,236,.18);
+  --yellow:#F5D547; --good:#9BE7A8; --bad:#FFA08F;
+  --hand:'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive;
+  --ui:'Nunito',system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--board);color:var(--chalk);font-family:var(--ui);font-size:16px;-webkit-font-smoothing:antialiased}
+body::after{content:"";position:fixed;inset:0;border:8px solid var(--wood);box-shadow:inset 0 0 0 2px var(--wood-dark);pointer-events:none;z-index:5}
+.app{box-sizing:border-box;min-height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:18px;
+  padding-block:24px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.screen{display:flex;flex-direction:column;gap:18px;flex:1}
+h1{font-family:var(--hand);font-weight:400;font-size:32px;margin:0;line-height:1.1;text-wrap:balance}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pill{display:flex;align-items:center;gap:6px;border:2px solid var(--faint);border-radius:999px;padding:5px 12px;font-weight:800;font-size:15px;color:var(--yellow);white-space:nowrap}
+.label{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.muted{color:var(--dim);font-size:15px;line-height:1.5;margin:0}
+
+.prog{display:flex;flex-direction:column;gap:8px}
+.prog-row{display:flex;justify-content:space-between;gap:12px;font-size:15px;font-weight:700;color:var(--dim);font-variant-numeric:tabular-nums}
+.bar{height:10px;border:2px solid var(--faint);border-radius:999px;overflow:hidden}
+.bar>div{height:100%;width:0;background:var(--yellow);transition:width .3s}
+
+/* card */
+.card{background:var(--board-2);border:2px solid var(--faint);border-radius:22px;padding:22px 18px;display:flex;flex-direction:column;gap:16px}
+.sent{font-family:var(--hand);font-size:30px;line-height:1.3;overflow-wrap:anywhere;text-wrap:pretty}
+.sent.cue{font-size:34px;text-align:center;color:var(--yellow)}
+.gap{display:inline-block;min-width:4.5em;border-bottom:3px dashed rgba(241,245,236,.55);color:var(--yellow);padding:0 4px;text-align:center}
+.gap.ok{border-bottom:3px solid var(--good);color:var(--good)}
+.gap.no{border-bottom:3px solid var(--bad);color:var(--good)}
+.cuehint{font-family:var(--hand);font-size:22px;color:var(--yellow)}
+
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:12px;text-align:left;font-family:var(--hand);font-size:24px;line-height:1.2;color:var(--chalk);
+  background:transparent;border:2px solid rgba(241,245,236,.35);border-radius:14px;padding:10px 14px}
+.opt .k{flex:none;width:28px;height:28px;border-radius:8px;border:2px solid var(--dim);display:flex;align-items:center;justify-content:center;font-family:var(--ui);font-size:14px;font-weight:800;color:var(--dim)}
+.opt .v{min-width:0;overflow-wrap:anywhere}
+.opt:hover:not(:disabled){border-color:var(--yellow)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--good);background:rgba(155,231,168,.12);color:var(--good)}
+.opt.right .k{border-color:var(--good);color:var(--good)}
+.opt.wrong{border-color:var(--bad);color:var(--bad)}
+.opt.wrong .v{text-decoration:line-through;text-decoration-thickness:2px}
+.opt.wrong .k{border-color:var(--bad);color:var(--bad)}
+.opt.fade{opacity:.45}
+
+.field{display:flex;flex-direction:column;gap:4px}
+.field input{font-family:var(--hand);font-size:28px;color:var(--chalk);background:rgba(241,245,236,.06);border:none;border-bottom:3px dashed rgba(241,245,236,.45);border-radius:10px 10px 0 0;padding:8px 12px;outline:none;width:100%;box-sizing:border-box}
+.field input:focus{border-bottom:3px solid var(--yellow);background:rgba(245,213,71,.08)}
+.field input::placeholder{color:rgba(241,245,236,.4)}
+.field.ok input{border-bottom:3px solid var(--good);color:var(--good)}
+.field.no input{border-bottom:3px solid var(--bad);color:var(--bad);text-decoration:line-through;text-decoration-thickness:2px}
+.fix{font-family:var(--hand);font-size:24px;color:var(--good);padding-left:12px}
+
+.tip{border:2px dashed rgba(241,245,236,.35);border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.5;color:var(--dim)}
+.tip b{color:var(--yellow)}
+.tip .ex{font-family:var(--hand);font-size:20px;color:var(--chalk)}
+.fb{border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.5;color:var(--chalk);border:2px solid var(--faint)}
+.fb.ok{border-color:var(--good)}
+.fb.no{border-color:var(--bad)}
+.fb .verdict{font-weight:800;display:block;margin-bottom:2px}
+.fb.ok .verdict{color:var(--good)}
+.fb.no .verdict{color:var(--bad)}
+.fb b{color:var(--yellow)}
+
+.actions{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+button{font-family:var(--ui);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn{font-size:19px;font-weight:800;border-radius:16px;padding:16px;border:none;background:var(--yellow);color:var(--board);box-shadow:0 4px 0 #B89A1E}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #B89A1E}
+.btn-ghost{font-size:16px;font-weight:700;border-radius:16px;padding:13px;background:transparent;color:var(--chalk);border:2px solid rgba(241,245,236,.4)}
+button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-offset:2px}
+
+.group-list{display:flex;flex-direction:column;gap:8px}
+.chip{display:flex;align-items:center;gap:12px;border:2px solid var(--faint);border-radius:14px;padding:12px 14px;cursor:pointer;position:relative}
+.chip input{position:absolute;opacity:0;width:1px;height:1px}
+.chip .box{flex:none;width:24px;height:24px;border:2px solid var(--dim);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.chip .box svg{opacity:0}
+.chip input:checked ~ .box{background:var(--yellow);border-color:var(--yellow)}
+.chip input:checked ~ .box svg{opacity:1}
+.chip .txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.chip .t{font-weight:800}
+.chip .s{font-family:var(--hand);font-size:18px;color:var(--dim)}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.seg.seg2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.seg button{font-size:17px;font-weight:800;padding:12px;border-radius:12px;border:2px solid var(--faint);background:transparent;color:var(--chalk)}
+.seg button[aria-pressed="true"]{background:var(--chalk);color:var(--board);border-color:var(--chalk)}
+
+.score{text-align:center;display:flex;flex-direction:column;gap:4px;padding:10px 0}
+.score .big{font-family:var(--hand);font-size:72px;line-height:1;color:var(--yellow);font-variant-numeric:tabular-nums}
+.mist{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.mist li{display:flex;flex-direction:column;gap:2px;border-bottom:1px dashed var(--faint);padding:8px 2px}
+.mist .forms{font-family:var(--hand);font-size:22px;overflow-wrap:anywhere}
+.mist .forms em{font-style:normal;color:var(--good)}
+.mist .de{color:var(--dim);font-size:14px}
+
+.nojs{margin:0;border:2px solid var(--bad);border-radius:14px;padding:12px 14px;font-weight:700;line-height:1.5;color:var(--bad)}
+.wiggle{animation:wig .45s ease}
+@keyframes wig{25%{transform:rotate(-2deg)}75%{transform:rotate(2deg)}}
+@media (prefers-reduced-motion:reduce){.wiggle{animation:none}.bar>div{transition:none}}
+</style>
+</head>
+<body>
+
+<main class="app">
+  <p class="nojs" id="nojs">Hier läuft die App nicht, weil diese Vorschau kein JavaScript ausführt. Bitte den Link in Safari öffnen.</p>
+
+  <!-- START -->
+  <section class="screen" id="s-start">
+    <div class="top">
+      <h1>Going-to Future</h1>
+      <span class="pill" id="best-pill">Rekord 0</span>
+    </div>
+    <p class="muted">Lücke füllen: richtige Antwort antippen. Ab und zu schreibst du selbst.</p>
+
+    <div class="label">Was üben?</div>
+    <div class="group-list" id="groups"></div>
+
+    <div class="label">Auch selbst schreiben?</div>
+    <div class="seg seg2" id="seg-type">
+      <button type="button" data-type="1">Ja</button>
+      <button type="button" data-type="0">Nein, nur antippen</button>
+    </div>
+
+    <div class="label">Wie viele pro Runde?</div>
+    <div class="seg" id="seg">
+      <button type="button" data-n="10">10</button>
+      <button type="button" data-n="20">20</button>
+      <button type="button" data-n="0">Alle</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="go" type="button">Los geht's</button>
+      <button class="btn-ghost" id="go-hard" type="button" hidden>Meine schwierigen Sätze üben</button>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="screen" id="s-quiz" hidden>
+    <div class="top">
+      <h1>Going-to Future</h1>
+      <span class="pill" id="streak">★ 0 in Folge</span>
+    </div>
+    <div class="prog">
+      <div class="prog-row"><span id="round-name">Bejahte Sätze</span><span id="count">1 / 10</span></div>
+      <div class="bar"><div id="bar"></div></div>
+    </div>
+
+    <div class="card" id="card">
+      <span class="label" id="q-label">Setze ein</span>
+      <div class="sent" id="sent"></div>
+      <div class="opts" id="opts"></div>
+      <div class="field" id="field" hidden>
+        <label class="label" for="answer" id="answer-label">Deine Antwort</label>
+        <input id="answer" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done">
+        <span class="fix" id="fix" hidden></span>
+      </div>
+    </div>
+
+    <div class="fb" id="fb" hidden></div>
+    <div class="tip" id="tip" hidden></div>
+
+    <div class="actions">
+      <button class="btn" id="main" type="button">Prüfen</button>
+      <button class="btn-ghost" id="hint" type="button">Regel anzeigen</button>
+    </div>
+  </section>
+
+  <!-- END -->
+  <section class="screen" id="s-end" hidden>
+    <div class="top">
+      <h1>Runde geschafft</h1>
+      <span class="pill" id="end-streak">★ 0</span>
+    </div>
+    <div class="score">
+      <span class="big" id="end-score">0 / 0</span>
+      <span class="muted" id="end-text">richtig</span>
+    </div>
+    <div class="label" id="mist-label">Diese Sätze nochmal anschauen</div>
+    <ul class="mist" id="mist"></ul>
+    <div class="actions">
+      <button class="btn" id="again-wrong" type="button">Fehler nochmal üben</button>
+      <button class="btn-ghost" id="again" type="button">Zurück zum Start</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  document.getElementById("nojs").remove();
+
+  const GROUPS = [
+    {id:1, t:"Bejahte Sätze", s:"I am going to visit my gran.",
+     tip:"<b>am / is / are + going to + Grundform</b>.<br>I → <b>am</b> · he, she, it → <b>is</b> · we, you, they → <b>are</b>", ex:"She is going to buy a new bike."},
+    {id:2, t:"Verneinte Sätze", s:"He isn't going to come.",
+     tip:"Das <b>not</b> steht nach am / is / are: <b>I'm not · isn't · aren't going to</b> + Grundform. Niemals don't oder doesn't!", ex:"We aren't going to watch TV."},
+    {id:3, t:"Fragen & Kurzantworten", s:"Are you going to …? – Yes, I am.",
+     tip:"In der Frage kommt <b>am / is / are vor das Subjekt</b>. Ein Fragewort steht ganz vorne.<br>Kurzantwort: <b>Yes, I am. / No, she isn't.</b> Bei Yes nie verkürzen.", ex:"What are you going to do?"},
+    {id:4, t:"going to oder will?", s:"Plan oder spontan?",
+     tip:"<b>going to</b>: Plan, schon vorher beschlossen, oder Vorhersage, weil man etwas sieht.<br><b>will</b>: spontane Entscheidung, Angebot, Versprechen, Vermutung (I think, maybe).", ex:"Look at the clouds! It's going to rain. – I'll take an umbrella."}
+  ];
+
+  // Multiple Choice: o[0] ist richtig (wird gemischt). Eintippen: t:1, c = Hinweis, a = erlaubte Antworten, x:1 = Kurzform nicht auflösen
+  const Q = [
+    // 1 bejaht
+    {g:1,q:"I ___ visit my grandma on Sunday.",o:["am going to","is going to","are going to"],e:"Bei <b>I</b> immer <b>am</b>: I am going to …"},
+    {g:1,q:"My sister ___ buy a new bike.",o:["is going to","are going to","am going to"],e:"My sister = <b>she</b>, also <b>is</b> going to."},
+    {g:1,q:"We ___ have a party on Friday.",o:["are going to","is going to","am going to"],e:"Bei <b>we</b> heißt es <b>are</b> going to."},
+    {g:1,q:"Tom and Lisa ___ play tennis after school.",o:["are going to","is going to","going to"],e:"Tom and Lisa = <b>they</b>, also <b>are</b>. Ohne am/is/are geht es nie."},
+    {g:1,q:"Our class ___ visit a museum next week.",o:["is going to","are going to","am going to"],e:"Our class = <b>it</b> (eine Klasse), also <b>is</b>."},
+    {g:1,q:"You ___ love this game!",o:["are going to","is going to","am going to"],e:"Bei <b>you</b> immer <b>are</b>."},
+    {g:1,q:"I'm going to ___ a cake for Mum's birthday.",o:["bake","baking","bakes","baked"],e:"Nach going to kommt die <b>Grundform</b>: bake."},
+    {g:1,q:"They are going to ___ the new film tonight.",o:["watch","watching","watches"],e:"Nach going to kommt die <b>Grundform</b> ohne -ing und ohne -s."},
+    {g:1,lab:"Welcher Satz ist richtig?",o:["He is going to clean his room.","He going to clean his room.","He is going clean his room.","He are going to clean his room."],e:"Alles muss da sein: <b>is + going to + clean</b>."},
+    {g:1,q:"Dad ___ wash the car this afternoon.",o:["is going to","are going to","going to"],e:"Dad = <b>he</b>, also <b>is</b> going to."},
+    {g:1,t:1,q:"I ___ a new book in the holidays.",c:"read",a:["am going to read"],e:"I → <b>am going to read</b> (oder kurz: I'm going to read)."},
+    {g:1,t:1,q:"Max ___ football tomorrow.",c:"play",a:["is going to play"],e:"Max = he → <b>is going to play</b>."},
+    {g:1,t:1,q:"We ___ to Spain in the summer.",c:"fly",a:["are going to fly"],e:"we → <b>are going to fly</b>."},
+    {g:1,t:1,q:"My parents ___ the kitchen.",c:"paint",a:["are going to paint"],e:"My parents = they → <b>are going to paint</b>."},
+
+    // 2 verneint
+    {g:2,q:"I ___ go to bed early tonight.",o:["'m not going to","don't going to","not going to","am not go to"],e:"Verneinung: <b>I'm not going to</b>. Kein don't!"},
+    {g:2,q:"Ben ___ eat fish. He hates it.",o:["isn't going to","aren't going to","doesn't going to"],e:"Ben = he → <b>isn't going to</b>. Kein doesn't!"},
+    {g:2,q:"We ___ watch TV this evening.",o:["aren't going to","isn't going to","don't going to"],e:"we → <b>aren't going to</b>."},
+    {g:2,q:"It's sunny. It ___ rain today.",o:["isn't going to","aren't going to","not is going to"],e:"it → <b>isn't going to</b>. Das not kommt nach is."},
+    {g:2,q:"My friends ___ come to the party.",o:["aren't going to","isn't going to","not going to"],e:"My friends = they → <b>aren't going to</b>."},
+    {g:2,q:"I'm not going to ___ my homework on Saturday.",o:["do","doing","does"],e:"Auch im verneinten Satz: going to + <b>Grundform</b>."},
+    {g:2,q:"Lisa is ill. She ___ go to school today.",o:["isn't going to","is going to","aren't going to"],e:"Lisa ist krank, also geht sie <b>nicht</b>: she <b>isn't going to</b> go."},
+    {g:2,lab:"Welcher Satz ist richtig?",o:["She isn't going to come.","She not going to come.","She doesn't going to come.","She isn't going come."],e:"<b>isn't + going to + come</b>. Not steht nach is, und to darf nicht fehlen."},
+    {g:2,t:1,q:"I ___ my room today.",c:"not / tidy",a:["am not going to tidy"],e:"<b>I'm not going to tidy</b> (oder: I am not going to tidy)."},
+    {g:2,t:1,q:"Paul ___ a new phone.",c:"not / buy",a:["is not going to buy"],e:"Paul = he → <b>isn't going to buy</b>."},
+    {g:2,t:1,q:"They ___ home. They're going by bus.",c:"not / walk",a:["are not going to walk"],e:"they → <b>aren't going to walk</b>."},
+    {g:2,t:1,q:"Don't worry, we ___ late!",c:"not / be",a:["are not going to be"],e:"we → <b>aren't going to be</b> late."},
+
+    // 3 Fragen
+    {g:3,q:"___ you going to visit your cousins?",o:["Are","Is","Do","Am"],e:"Bei you: <b>Are</b> you going to …? In going-to-Fragen nie do."},
+    {g:3,q:"___ Emma going to sing at the concert?",o:["Is","Are","Does","Am"],e:"Emma = she → <b>Is</b> Emma going to …?"},
+    {g:3,q:"What ___ you going to do at the weekend?",o:["are","is","do"],e:"Fragewort + <b>are you</b> going to …?"},
+    {g:3,q:"Where ___ they going to stay in London?",o:["are","is","do"],e:"they → Where <b>are</b> they going to …?"},
+    {g:3,q:"When ___ your sister going to call?",o:["is","are","does"],e:"your sister = she → When <b>is</b> your sister going to …?"},
+    {g:3,q:"Are you going to play football? – Yes, ___.",o:["I am","I'm","I do","I are"],e:"Kurzantwort: <b>Yes, I am.</b> Bei Yes nie verkürzen, also nicht I'm."},
+    {g:3,q:"Is your dad going to cook tonight? – No, ___.",o:["he isn't","he doesn't","he not","he aren't"],e:"Frage mit is → Antwort mit is: <b>No, he isn't.</b>"},
+    {g:3,q:"Are your friends going to come? – Yes, ___.",o:["they are","they're","they do","they is"],e:"<b>Yes, they are.</b> Bei Yes nicht verkürzen."},
+    {g:3,q:"Is it going to snow tomorrow? – No, ___.",o:["it isn't","it doesn't","it not","it aren't"],e:"<b>No, it isn't.</b>"},
+    {g:3,lab:"Welche Frage ist richtig?",o:["Is he going to help us?","He is going to help us?","Does he going to help us?","Is he go to help us?"],e:"<b>Is</b> kommt nach vorne: Is he going to help us?"},
+    {g:3,t:1,full:1,lab:"Bilde die Frage mit going to",q:"you / wear / your new jacket",a:["are you going to wear your new jacket"],e:"<b>Are you going to wear your new jacket?</b>"},
+    {g:3,t:1,full:1,lab:"Bilde die Frage mit going to",q:"Tim / play / computer games",a:["is tim going to play computer games"],e:"Tim = he → <b>Is Tim going to play computer games?</b>"},
+    {g:3,t:1,full:1,lab:"Bilde die Frage mit going to",q:"what / you / do / after school",a:["what are you going to do after school"],e:"<b>What are you going to do after school?</b>"},
+    {g:3,t:1,x:1,lab:"Schreib die Kurzantwort",q:"Is Sarah going to come? – No, ___.",a:["she isn't","she is not","she's not"],e:"<b>No, she isn't.</b>"},
+    {g:3,t:1,x:1,lab:"Schreib die Kurzantwort",q:"Are you going to help me? – Yes, ___.",a:["i am"],e:"<b>Yes, I am.</b> Bei Yes nie verkürzen."},
+
+    // 4 going to oder will
+    {g:4,q:"The phone is ringing. – I ___ answer it!",o:["will","am going to"],e:"Spontane Entscheidung im Moment → <b>will</b> (I'll answer it)."},
+    {g:4,q:"I've got the tickets. We ___ see the match on Saturday.",o:["are going to","will"],e:"Schon geplant, die Tickets sind gekauft → <b>going to</b>."},
+    {g:4,q:"Look! That boy is running too fast. He ___ fall!",o:["is going to","will"],e:"Man sieht schon, was gleich passiert → <b>going to</b>."},
+    {g:4,q:"I think robots ___ do our homework one day.",o:["will","are going to"],e:"Vermutung mit <b>I think</b> → <b>will</b>."},
+    {g:4,q:"This bag is so heavy! – Don't worry, I ___ help you.",o:["will","am going to"],e:"Angebot, spontan → <b>will</b> (I'll help you)."},
+    {g:4,q:"Mum has bought flour and eggs. She ___ bake a cake.",o:["is going to","will"],e:"Plan, die Zutaten sind schon gekauft → <b>going to</b>."},
+    {g:4,q:"I promise I ___ tell anybody your secret.",o:["won't","am not going to"],e:"Versprechen → <b>will / won't</b>."},
+    {g:4,q:"What are your plans for the holidays? – We ___ visit our friends in Scotland.",o:["are going to","will"],e:"Plans = Pläne → <b>going to</b>."},
+    {g:4,q:"It's cold in here. – OK, I ___ close the window.",o:["will","am going to"],e:"Spontane Reaktion → <b>will</b> (I'll close it)."},
+    {g:4,q:"Maybe it ___ snow at Christmas.",o:["will","is going to"],e:"<b>Maybe</b> = Vermutung ohne Anzeichen → <b>will</b>."},
+    {g:4,lab:"Welcher Satz zeigt einen Plan?",o:["I'm going to learn the guitar. I've already got one.","Oh, the doorbell! I'll open the door.","I think it will be sunny tomorrow."],e:"Ein Plan, schon vorbereitet → <b>going to</b>."},
+    {g:4,t:1,q:"I'm thirsty. – I ___ you some water.",c:"get",a:["will get"],e:"Spontanes Angebot → <b>I'll get</b> (I will get)."},
+    {g:4,t:1,q:"Look at those black clouds! It ___.",c:"rain",a:["is going to rain"],e:"Man sieht die Wolken → <b>It's going to rain.</b>"}
+  ];
+  Q.forEach((q,i)=>q.id=i);
+
+  const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+  const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+  let stats=load("gt-stats",{});
+  let settings=load("gt-settings",{groups:[1,2,3,4],n:10,type:true});
+  if(typeof settings.type!=="boolean") settings.type=true;
+  let best=load("gt-best",0);
+
+  const $=id=>document.getElementById(id);
+  const screens={start:$("s-start"),quiz:$("s-quiz"),end:$("s-end")};
+  function show(n){for(const k in screens) screens[k].hidden=k!==n; window.scrollTo(0,0)}
+  const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+  // ---------- Start ----------
+  const tick='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E3A2F" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+  $("groups").innerHTML=GROUPS.map(g=>{
+    const n=Q.filter(q=>q.g===g.id).length;
+    return `<label class="chip"><input type="checkbox" id="g${g.id}" value="${g.id}"><span class="box">${tick}</span>
+      <span class="txt"><span class="t">${g.t} · ${n}</span><span class="s">${g.s}</span></span></label>`;
+  }).join("");
+  GROUPS.forEach(g=>{$("g"+g.id).checked=settings.groups.includes(g.id)});
+  $("groups").addEventListener("change",()=>{
+    settings.groups=GROUPS.map(g=>g.id).filter(id=>$("g"+id).checked); save("gt-settings",settings); refreshStart();
+  });
+  $("seg").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b) return; settings.n=+b.dataset.n; save("gt-settings",settings); refreshStart()});
+  $("seg-type").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b) return; settings.type=b.dataset.type==="1"; save("gt-settings",settings); refreshStart()});
+
+  const pool=()=>Q.filter(q=>settings.groups.includes(q.g)&&(settings.type||!q.t));
+  const hardOnes=()=>Q.filter(q=>{const s=stats[q.id];return s&&s.w>s.r&&(settings.type||!q.t)});
+  function refreshStart(){
+    [...$("seg").children].forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.n===settings.n)));
+    [...$("seg-type").children].forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.type==="1")===settings.type)));
+    $("best-pill").textContent="Rekord ★ "+best;
+    const p=pool().length;
+    $("go").disabled=p===0; $("go").textContent=p?"Los geht's":"Bitte ein Thema wählen";
+    const h=hardOnes().length; $("go-hard").hidden=!h; $("go-hard").textContent=`Meine schwierigen Sätze üben (${h})`;
+  }
+
+  // ---------- Quiz ----------
+  let round=[],idx=0,right=0,streak=0,mistakes=[],answered=false,cur=null;
+  function start(list){
+    if(!list.length) return;
+    round=list; idx=0; right=0; streak=0; mistakes=[];
+    show("quiz"); render();
+  }
+  $("go").addEventListener("click",()=>{let l=shuffle(pool()); if(settings.n) l=l.slice(0,settings.n); start(l)});
+  $("go-hard").addEventListener("click",()=>start(shuffle(hardOnes())));
+  $("again").addEventListener("click",()=>{show("start");refreshStart()});
+  $("again-wrong").addEventListener("click",()=>start(shuffle(mistakes)));
+
+  function sentHTML(q,fill,cls){
+    const g=fill?`<span class="gap ${cls}">${esc(fill)}</span>`:'<span class="gap">&nbsp;</span>';
+    return esc(q.q).replace("___",g);
+  }
+  function render(){
+    cur=round[idx]; answered=false;
+    const grp=GROUPS.find(g=>g.id===cur.g);
+    $("round-name").textContent=grp.t;
+    $("count").textContent=`${idx+1} / ${round.length}`;
+    $("bar").style.width=(idx/round.length*100)+"%";
+    $("streak").textContent=`★ ${streak} in Folge`;
+    $("fb").hidden=true; $("tip").hidden=true; $("hint").hidden=false;
+    $("sent").className="sent";
+    $("fix").hidden=true; $("field").className="field";
+    if(!cur.t){
+      $("q-label").textContent=cur.lab||"Setze ein";
+      $("sent").hidden=!cur.q; if(cur.q) $("sent").innerHTML=sentHTML(cur);
+      $("field").hidden=true; $("opts").hidden=false;
+      const opts=shuffle(cur.o.map((v,i)=>({v,ok:i===0})));
+      $("opts").innerHTML=opts.map((o,i)=>`<button type="button" class="opt" data-ok="${o.ok?1:0}" data-v="${esc(o.v)}"><span class="k">${"ABCD"[i]}</span><span class="v">${esc(o.v)}</span></button>`).join("");
+      $("main").hidden=true;
+    }else{
+      $("opts").hidden=true; $("opts").innerHTML=""; $("field").hidden=false; $("sent").hidden=false;
+      $("main").hidden=false; $("main").textContent="Prüfen";
+      if(cur.full){
+        $("q-label").textContent=cur.lab; $("sent").className="sent cue"; $("sent").textContent=cur.q;
+        $("answer-label").textContent="Deine Frage";
+      }else{
+        $("q-label").textContent=cur.lab||"Schreib die richtige Form";
+        $("sent").innerHTML=sentHTML(cur)+(cur.c?` <span class="cuehint">(${esc(cur.c)})</span>`:"");
+        $("answer-label").textContent="Was gehört in die Lücke?";
+      }
+      $("answer").value=""; $("answer").disabled=false;
+      setTimeout(()=>{try{$("answer").focus({preventScroll:true})}catch(e){}},50);
+    }
+  }
+
+  function norm(s,raw){
+    s=s.toLowerCase().replace(/[’‘`´]/g,"'").replace(/[.?!,]/g," ").replace(/\s+/g," ").trim();
+    if(!raw){
+      s=s.replace(/\bisn't\b/g,"is not").replace(/\baren't\b/g,"are not").replace(/\bwon't\b/g,"will not")
+         .replace(/'m\b/g," am").replace(/'re\b/g," are").replace(/'s\b/g," is").replace(/'ll\b/g," will")
+         .replace(/\s+/g," ").trim();
+    }
+    return s;
+  }
+
+  function finish(ok,shown){
+    answered=true;
+    const s=stats[cur.id]||{r:0,w:0}; ok?s.r++:s.w++; stats[cur.id]=s; save("gt-stats",stats);
+    if(ok){right++;streak++; if(streak>best){best=streak;save("gt-best",best)}}
+    else{streak=0; mistakes.push(cur); $("card").classList.remove("wiggle"); void $("card").offsetWidth; $("card").classList.add("wiggle")}
+    $("streak").textContent=`★ ${streak} in Folge`;
+    const praise=["Super!","Genau!","Richtig!","Stark!","Perfekt!"];
+    $("fb").className="fb "+(ok?"ok":"no");
+    $("fb").innerHTML=`<span class="verdict">${ok?praise[Math.floor(Math.random()*praise.length)]:"Nicht ganz."}</span>${cur.e}`;
+    $("fb").hidden=false; $("tip").hidden=true; $("hint").hidden=true;
+    if(cur.q&&!cur.full&&cur.q.includes("___")) $("sent").innerHTML=sentHTML(cur,shown,ok?"ok":"no");
+    $("main").hidden=false; $("main").textContent=idx+1<round.length?"Weiter":"Ergebnis ansehen";
+    $("main").focus({preventScroll:true});
+  }
+
+  $("opts").addEventListener("click",e=>{
+    const b=e.target.closest(".opt"); if(!b||answered) return;
+    const ok=b.dataset.ok==="1";
+    [...$("opts").children].forEach(x=>{x.disabled=true;
+      if(x.dataset.ok==="1") x.classList.add("right"); else if(x!==b) x.classList.add("fade");});
+    if(!ok) b.classList.add("wrong");
+    finish(ok,cur.o[0]);
+  });
+
+  function checkTyped(){
+    const v=$("answer").value; if(!v.trim()){$("answer").focus();return}
+    const ok=cur.a.some(a=>norm(a,cur.x)===norm(v,cur.x));
+    $("answer").disabled=true;
+    $("field").className="field "+(ok?"ok":"no");
+    let shown=cur.a[0];
+    if(cur.full) shown=shown.charAt(0).toUpperCase()+shown.slice(1)+"?";
+    else if(cur.x) shown=cur.a[0].replace(/^i /,"I ");
+    if(!ok){$("fix").textContent=shown; $("fix").hidden=false}
+    finish(ok,shown);
+  }
+  $("main").addEventListener("click",()=>{
+    if(!answered){checkTyped();return}
+    idx++; if(idx<round.length) render(); else end();
+  });
+  $("answer").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault(); if(!answered) checkTyped()}});
+  document.addEventListener("keydown",e=>{
+    if(screens.quiz.hidden) return;
+    if(answered&&e.key==="Enter"&&document.activeElement!==$("main")){e.preventDefault();$("main").click();return}
+    if(!answered&&!cur.t){const i="1234abcd".indexOf(e.key.toLowerCase())%4; const b=$("opts").children[i]; if(i>=0&&b) b.click()}
+  });
+  $("hint").addEventListener("click",()=>{
+    const g=GROUPS.find(x=>x.id===cur.g);
+    $("tip").innerHTML=`${g.tip}<br><span class="ex">${esc(g.ex)}</span>`; $("tip").hidden=false;
+  });
+
+  function end(){
+    $("bar").style.width="100%";
+    show("end");
+    $("end-score").textContent=`${right} / ${round.length}`;
+    const r=right/round.length;
+    $("end-text").textContent=r===1?"alles richtig, klasse!":r>=.8?"richtig, sehr gut!":r>=.5?"richtig, weiter so!":"richtig, übe die Fehler nochmal";
+    $("end-streak").textContent="Rekord ★ "+best;
+    $("mist-label").hidden=!mistakes.length; $("again-wrong").hidden=!mistakes.length;
+    $("mist").innerHTML=mistakes.map(q=>{
+      let line;
+      if(q.full){const a=q.a[0]; line=`${esc(q.q)} → <em>${esc(a.charAt(0).toUpperCase()+a.slice(1))}?</em>`}
+      else if(q.q&&q.q.includes("___")){const a=q.t?(q.x?q.a[0].replace(/^i /,"I "):q.a[0]):q.o[0]; line=esc(q.q).replace("___",`<em>${esc(a)}</em>`)}
+      else line=`<em>${esc(q.o[0])}</em>`;
+      return `<li><span class="forms">${line}</span><span class="de">${GROUPS.find(g=>g.id===q.g).t}</span></li>`;
+    }).join("");
+  }
+
+  refreshStart();
+})();
+</script>
+
+</body>
+</html>
