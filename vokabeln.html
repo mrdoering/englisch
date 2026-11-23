@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="de"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Steigerung & Vokabeln</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* VOICE: spielerische Kreidetafel, wie Verben- und Going-to-Seite
+   IDEA: Schultafel im Holzrahmen
+   PICTURE: die Satzkarte mit Lücke ist das Bild
+   COLOUR and TYPE: Tafelgrün, Kreideweiß, Gelb; Patrick Hand + Nunito
+   LAYOUT: eine Spalte, Handy zuerst; Start, Quiz, Ergebnis */
+:root{
+  --wood:#7A5230; --wood-dark:#5C3B20;
+  --board:#1E3A2F; --board-2:#24453A;
+  --chalk:#F1F5EC; --dim:#C9D6C3; --faint:rgba(241,245,236,.18);
+  --yellow:#F5D547; --good:#9BE7A8; --bad:#FFA08F;
+  --hand:'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive;
+  --ui:'Nunito',system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%;margin:0}
+body{background:var(--board);color:var(--chalk);font-family:var(--ui);font-size:16px;-webkit-font-smoothing:antialiased;overflow-x:clip}
+body::after{content:"";position:fixed;inset:0;border:8px solid var(--wood);box-shadow:inset 0 0 0 2px var(--wood-dark);pointer-events:none;z-index:5}
+.app{min-height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:18px;
+  padding-top:max(24px,env(safe-area-inset-top,0px));padding-bottom:max(24px,env(safe-area-inset-bottom,0px));
+  padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.screen{display:flex;flex-direction:column;gap:18px;flex:1}
+[hidden]{display:none!important}
+h1{font-family:var(--hand);font-weight:400;font-size:32px;margin:0;line-height:1.1;text-wrap:balance}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pill{display:flex;align-items:center;gap:6px;border:2px solid var(--faint);border-radius:999px;padding:5px 12px;font-weight:800;font-size:15px;color:var(--yellow);white-space:nowrap}
+.label{font-size:13px;font-weight:800;color:var(--dim)}
+.muted{color:var(--dim);font-size:15px;line-height:1.5;margin:0}
+
+.prog{display:flex;flex-direction:column;gap:8px}
+.prog-row{display:flex;justify-content:space-between;gap:12px;font-size:15px;font-weight:700;color:var(--dim);font-variant-numeric:tabular-nums}
+.bar{height:10px;border:2px solid var(--faint);border-radius:999px;overflow:hidden}
+.bar>div{height:100%;width:0;background:var(--yellow);transition:width .3s}
+
+.card{background:var(--board-2);border:2px solid var(--faint);border-radius:22px;padding:22px 18px;display:flex;flex-direction:column;gap:16px}
+.sent{font-family:var(--hand);font-size:30px;line-height:1.3;overflow-wrap:anywhere;text-wrap:pretty}
+.gap{display:inline-block;min-width:4.5em;border-bottom:3px dashed rgba(241,245,236,.55);color:var(--yellow);padding:0 4px;text-align:center}
+.gap.ok{border-bottom:3px solid var(--good);color:var(--good)}
+.gap.no{border-bottom:3px solid var(--bad);color:var(--good)}
+.cuehint{font-family:var(--hand);font-size:22px;color:var(--yellow);white-space:nowrap}
+
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:12px;text-align:left;font-family:var(--hand);font-size:24px;line-height:1.2;color:var(--chalk);
+  background:transparent;border:2px solid rgba(241,245,236,.35);border-radius:14px;padding:10px 14px;min-height:48px}
+.opt .k{flex:none;width:28px;height:28px;border-radius:8px;border:2px solid var(--dim);display:flex;align-items:center;justify-content:center;font-family:var(--ui);font-size:14px;font-weight:800;color:var(--dim)}
+.opt .v{overflow-wrap:anywhere}
+.opt:hover:not(:disabled){border-color:var(--yellow)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--good);background:rgba(155,231,168,.12);color:var(--good)}
+.opt.right .k{border-color:var(--good);color:var(--good)}
+.opt.wrong{border-color:var(--bad);color:var(--bad)}
+.opt.wrong .v{text-decoration:line-through;text-decoration-thickness:2px}
+.opt.wrong .k{border-color:var(--bad);color:var(--bad)}
+.opt.fade{opacity:.45}
+
+.field{display:flex;flex-direction:column;gap:4px}
+.field input{font-family:var(--hand);font-size:28px;color:var(--chalk);background:rgba(241,245,236,.06);border:none;border-bottom:3px dashed rgba(241,245,236,.45);border-radius:10px 10px 0 0;padding:8px 12px;outline:none;width:100%}
+.field input:focus{border-bottom:3px solid var(--yellow);background:rgba(245,213,71,.08)}
+.field.ok input{border-bottom:3px solid var(--good);color:var(--good)}
+.field.no input{border-bottom:3px solid var(--bad);color:var(--bad);text-decoration:line-through;text-decoration-thickness:2px}
+.fix{font-family:var(--hand);font-size:24px;color:var(--good);padding-left:12px}
+
+.tip{border:2px dashed rgba(241,245,236,.35);border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.5;color:var(--dim)}
+.tip b{color:var(--yellow)}
+.tip .ex{font-family:var(--hand);font-size:20px;color:var(--chalk)}
+.fb{border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.5;color:var(--chalk);border:2px solid var(--faint)}
+.fb.ok{border-color:var(--good)}
+.fb.no{border-color:var(--bad)}
+.fb .verdict{font-weight:800;display:block;margin-bottom:2px}
+.fb.ok .verdict{color:var(--good)}
+.fb.no .verdict{color:var(--bad)}
+.fb b{color:var(--yellow)}
+
+.actions{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+button{font-family:var(--ui);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn{font-size:19px;font-weight:800;border-radius:16px;padding:16px;border:none;background:var(--yellow);color:var(--board);box-shadow:0 4px 0 #B89A1E}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #B89A1E}
+.btn:disabled{opacity:.5}
+.btn-ghost{font-size:16px;font-weight:700;border-radius:16px;padding:13px;background:transparent;color:var(--chalk);border:2px solid rgba(241,245,236,.4)}
+button:focus-visible,.chip:focus-within{outline:3px solid var(--yellow);outline-offset:2px}
+
+.sect{font-family:var(--hand);font-size:24px;color:var(--yellow);margin:4px 0 -6px}
+.group-list{display:flex;flex-direction:column;gap:8px}
+.chip{display:flex;align-items:center;gap:12px;border:2px solid var(--faint);border-radius:14px;padding:12px 14px;cursor:pointer;position:relative}
+.chip input{position:absolute;opacity:0;width:1px;height:1px}
+.chip .box{flex:none;width:24px;height:24px;border:2px solid var(--dim);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.chip .box svg{opacity:0}
+.chip input:checked ~ .box{background:var(--yellow);border-color:var(--yellow)}
+.chip input:checked ~ .box svg{opacity:1}
+.chip .txt{display:flex;flex-direction:column;gap:2px}
+.chip .t{font-weight:800}
+.chip .s{font-family:var(--hand);font-size:18px;color:var(--dim)}
+.soon{border:2px dashed var(--faint);border-radius:14px;padding:12px 14px;color:var(--dim);font-size:15px;line-height:1.5}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.seg.seg2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.seg button{font-size:17px;font-weight:800;padding:12px;border-radius:12px;border:2px solid var(--faint);background:transparent;color:var(--chalk);min-height:48px}
+.seg button[aria-pressed="true"]{background:var(--chalk);color:var(--board);border-color:var(--chalk)}
+
+.score{text-align:center;display:flex;flex-direction:column;gap:4px;padding:10px 0}
+.score .big{font-family:var(--hand);font-size:72px;line-height:1;color:var(--yellow);font-variant-numeric:tabular-nums}
+.mist{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.mist li{display:flex;flex-direction:column;gap:2px;border-bottom:1px dashed var(--faint);padding:8px 2px}
+.mist .forms{font-family:var(--hand);font-size:22px;overflow-wrap:anywhere}
+.mist .forms em{font-style:normal;color:var(--good)}
+.mist .de{color:var(--dim);font-size:14px}
+
+.nojs{margin:0;border:2px solid var(--bad);border-radius:14px;padding:12px 14px;font-weight:700;line-height:1.5;color:var(--bad)}
+.wiggle{animation:wig .45s ease}
+@keyframes wig{25%{transform:rotate(-2deg)}75%{transform:rotate(2deg)}}
+@media (prefers-reduced-motion:reduce){.wiggle{animation:none}.bar>div{transition:none}}
+</style>
+</head><body>
+
+<main class="app">
+  <p class="nojs" id="nojs">Hier läuft die App nicht, weil diese Vorschau kein JavaScript ausführt. Bitte den Link in Safari öffnen.</p>
+
+  <section class="screen" id="s-start">
+    <div class="top">
+      <h1>Steigerung & Vokabeln</h1>
+      <span class="pill" id="best-pill">Rekord ★ 0</span>
+    </div>
+    <p class="muted">Lücke füllen: richtige Antwort antippen. Ab und zu schreibst du selbst.</p>
+
+    <div class="sect">Steigerung</div>
+    <div class="group-list" id="groups-st"></div>
+
+    <div class="sect">Vokabeln</div>
+    <div class="group-list" id="groups-vo"></div>
+    <div class="soon" id="vo-soon">Die Vokabeln aus deinem Buch kommen hier bald dazu.</div>
+
+    <div class="label">Auch selbst schreiben?</div>
+    <div class="seg seg2" id="seg-type">
+      <button type="button" data-type="1">Ja</button>
+      <button type="button" data-type="0">Nein, nur antippen</button>
+    </div>
+
+    <div class="label">Wie viele pro Runde?</div>
+    <div class="seg" id="seg">
+      <button type="button" data-n="10">10</button>
+      <button type="button" data-n="20">20</button>
+      <button type="button" data-n="0">Alle</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="go" type="button">Los geht's</button>
+      <button class="btn-ghost" id="go-hard" type="button" hidden>Meine schwierigen Aufgaben üben</button>
+    </div>
+  </section>
+
+  <section class="screen" id="s-quiz" hidden>
+    <div class="top">
+      <h1 id="quiz-title">Steigerung</h1>
+      <span class="pill" id="streak">★ 0 in Folge</span>
+    </div>
+    <div class="prog">
+      <div class="prog-row"><span id="round-name">-er / -est</span><span id="count">1 / 10</span></div>
+      <div class="bar"><div id="bar"></div></div>
+    </div>
+
+    <div class="card" id="card">
+      <span class="label" id="q-label">Setze ein</span>
+      <div class="sent" id="sent"></div>
+      <div class="opts" id="opts"></div>
+      <div class="field" id="field" hidden>
+        <label class="label" for="answer" id="answer-label">Was gehört in die Lücke?</label>
+        <input id="answer" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done">
+        <span class="fix" id="fix" hidden></span>
+      </div>
+    </div>
+
+    <div class="fb" id="fb" hidden></div>
+    <div class="tip" id="tip" hidden></div>
+
+    <div class="actions">
+      <button class="btn" id="main" type="button">Prüfen</button>
+      <button class="btn-ghost" id="hint" type="button">Regel anzeigen</button>
+    </div>
+  </section>
+
+  <section class="screen" id="s-end" hidden>
+    <div class="top">
+      <h1>Runde geschafft</h1>
+      <span class="pill" id="end-streak">★ 0</span>
+    </div>
+    <div class="score">
+      <span class="big" id="end-score">0 / 0</span>
+      <span class="muted" id="end-text">richtig</span>
+    </div>
+    <div class="label" id="mist-label">Diese Aufgaben nochmal anschauen</div>
+    <ul class="mist" id="mist"></ul>
+    <div class="actions">
+      <button class="btn" id="again-wrong" type="button">Fehler nochmal üben</button>
+      <button class="btn-ghost" id="again" type="button">Zurück zum Start</button>
+    </div>
+  </section>
+</main>
+
+<script>
+{
+  document.getElementById("nojs").remove();
+
+  // sec: "st" = Steigerung, "vo" = Vokabeln
+  const GROUPS = [
+    {id:1, sec:"st", t:"-er / -est", s:"tall – taller – tallest",
+     tip:"Kurze Adjektive: <b>-er</b> (als) und <b>the … -est</b> (am …sten).<br>Endet auf <b>-e</b>: nur -r / -st (nice – nicer).<br>Konsonant + <b>-y</b> → <b>-ier / -iest</b> (happy – happier).<br>Kurzer Vokal + ein Konsonant → <b>verdoppeln</b> (big – bigger, hot – hottest).", ex:"My dog is bigger than your cat."},
+    {id:2, sec:"st", t:"more / most", s:"beautiful – more beautiful – most beautiful",
+     tip:"Lange Adjektive (meist ab 3 Silben, und viele mit 2 Silben wie boring, famous): <b>more</b> … und <b>the most</b> …<br>Nie beides zusammen: nicht more bigger!", ex:"This is the most exciting game."},
+    {id:3, sec:"st", t:"Unregelmäßige", s:"good – better – best",
+     tip:"<b>good – better – best</b><br><b>bad – worse – worst</b><br><b>many / much – more – most</b><br><b>little – less – least</b><br><b>far – farther – farthest</b>", ex:"Pizza is good, but ice cream is better!"},
+    {id:4, sec:"st", t:"Vergleiche", s:"than · as … as · the …est",
+     tip:"Ungleich: Steigerung + <b>than</b> (als). Nicht then!<br>Gleich: <b>as</b> + Grundform + <b>as</b> (so … wie).<br>Nicht gleich: <b>not as … as</b>.<br>Am …sten: <b>the</b> + -est / most, oft mit <b>in</b> (in the class).", ex:"Tom is as tall as Ben, but Lisa is the tallest in the class."},
+    {id:11, sec:"vo", t:"Unit 2 · Seite 28–31", s:"singer, queue, nervous, a few …"},
+    {id:12, sec:"vo", t:"Unit 2 · Seite 32–35", s:"awful, mistake, comma, plane …"},
+    {id:13, sec:"vo", t:"Unit 2 · Seite 36–39", s:"cheer, stage, recorder, paw …"},
+    {id:14, sec:"vo", t:"Unit 2 · Seite 40–42", s:"shy, spoon, sunglasses, worse …"}
+  ];
+
+  // Vokabeln English G Access 2, Unit 2 (aus dem Dictionary, Fundstelle II 2): [Seite, Englisch, Deutsch]
+  const V = [
+    [28,"article","Artikel"],[28,"audition","Vorsprechen, Vorsingen, Vorspielen"],[28,"call out the names","die Namen aufrufen"],
+    [28,"caller","Anrufer/in"],[28,"dancer","Tänzer/in"],[28,"doorbell","Türklingel"],[28,"fighter","Kämpfer/in"],
+    [28,"helper","Helfer/in"],[28,"last year's …","das … vom letzten Jahr"],[28,"listener","Zuhörer/in"],[28,"musical","Musical"],
+    [28,"next year's …","das … vom nächsten Jahr"],[28,"queue","Schlange stehen, sich anstellen"],[28,"reader","Leser/in"],
+    [28,"ring","klingeln, läuten"],[28,"runner","Läufer/in"],[28,"shop","einkaufen"],[28,"shopper","(Ein-)Käufer/in"],
+    [28,"singer","Sänger/in"],[28,"speak","sprechen, reden"],[28,"speaker","Sprecher/in, Redner/in"],
+    [28,"this year's …","das diesjährige …"],[28,"worker","Arbeiter/in"],
+    [30,"a bit","ein bisschen, etwas"],[30,"by …","von … (z. B. ein Lied von …)"],[30,"earphones","Ohrhörer, Kopfhörer"],
+    [30,"a few","ein paar, einige"],[30,"nervous","nervös, aufgeregt"],[30,"pull sth. out","etwas herausziehen"],
+    [30,"you should …","du solltest …"],[30,"show","Show, Vorstellung"],[30,"side","Seite"],
+    [31,"dialogue","Dialog"],[31,"go in","hineingehen"],[31,"present","Gegenwart"],
+    [32,"(not) as big as","(nicht) so groß wie"],[32,"awful","schrecklich, fürchterlich"],[32,"find sth. out","etwas herausfinden"],
+    [32,"get sth.","(sich) etwas besorgen, holen"],[32,"get on","vorankommen, zurechtkommen"],[32,"get ready (for)","sich fertig machen (für)"],
+    [32,"label","beschriften; Schild, Etikett"],[32,"large","groß"],[32,"the longest","der/die/das längste"],[32,"mean","meinen"],
+    [32,"mine","meiner, meine, meins"],[32,"ours","unserer, unsere, unseres"],[32,"second biggest","zweitgrößte(r, s)"],
+    [32,"take sth. out","etwas herausnehmen"],[32,"bigger than","größer als"],[32,"third biggest","drittgrößte(r, s)"],
+    [32,"worksheet","Arbeitsblatt"],
+    [33,"square kilometre","Quadratkilometer"],[33,"mistake","Fehler"],
+    [34,"about 300","ungefähr 300"],[34,"cool","kühl"],[34,"earth","Erde (der Planet)"],[34,"on earth","auf der Erde"],
+    [34,"plane","Flugzeug"],[34,"on the plane","im Flugzeug"],[34,"tall","groß (Person); hoch (Gebäude, Baum)"],
+    [35,"read aloud","laut (vor)lesen"],[35,"change","(sich) (ver)ändern"],[35,"colon","Doppelpunkt"],[35,"comma","Komma"],
+    [35,"everything","alles"],[35,"exclamation mark","Ausrufezeichen"],[35,"full stop","Punkt (Satzzeichen)"],[35,"hamster","Hamster"],
+    [35,"hyphen","Bindestrich"],[35,"make sure that …","sich vergewissern, dass …; dafür sorgen, dass …"],
+    [35,"pause","innehalten; eine Pause einlegen"],[35,"punctuation","Zeichensetzung"],[35,"question mark","Fragezeichen"],
+    [35,"scared","verängstigt"],
+    [36,"act","schauspielern"],[36,"brilliant","großartig, genial"],[36,"cheer","jubeln"],[36,"clap","(Beifall) klatschen"],
+    [36,"even","sogar"],[36,"so far","bis jetzt; bis hierher"],[36,"hers","ihrer, ihre, ihrs (von ihr)"],[36,"his","seiner, seine, seins"],
+    [36,"lovely","schön, hübsch, herrlich"],[36,"more beautiful (than)","schöner (als)"],[36,"the most beautiful","der/die/das schönste"],
+    [36,"on my own","allein"],[36,"stage","Bühne"],[36,"talented","begabt, talentiert"],[36,"theirs","ihrer, ihre, ihrs (von ihnen)"],
+    [36,"yours","deiner, deine, deins; eurer, eure, eures"],
+    [38,"adjective","Adjektiv"],[38,"concert","Konzert"],[38,"designer","Designer/in"],[38,"fashion","Mode"],
+    [38,"town hall","Rathaus"],[38,"model","Model"],[38,"one-syllable","einsilbig"],[38,"recorder","Blockflöte"],
+    [38,"round the world","um die Welt"],[38,"snow","Schnee"],[38,"syllable","Silbe"],[38,"theatre","Theater"],
+    [38,"two-syllable","zweisilbig"],
+    [39,"fine","fein"],[39,"paw","Pfote, Tatze"],[39,"stairs","Treppe"],[39,"whose?","wessen?"],
+    [40,"What could be better?","Was könnte besser sein?"],[40,"clear","klar, deutlich"],[40,"correct","richtig, korrekt"],
+    [40,"like this","so (auf diese Weise)"],[40,"size","Größe"],
+    [41,"comedy","Comedyshow, Komödie"],[41,"lie","liegen"],[41,"shy","schüchtern, scheu"],[41,"wake sb. up","jemanden (auf)wecken"],
+    [42,"Anyway, …","Jedenfalls, … / Aber egal, …"],[42,"arm","Arm"],[42,"beep","piepen"],[42,"dance","Tanz"],
+    [42,"dance floor","Tanzfläche"],[42,"disco","Disko"],[42,"drama","Schauspiel; darstellende Kunst"],
+    [42,"drop sth.","etwas fallen lassen"],[42,"except","außer, bis auf"],[42,"flash","Lichtblitz"],[42,"fork","Gabel"],
+    [42,"gel","Gel"],[42,"glasses","(eine) Brille"],[42,"good-looking","gut aussehend"],[42,"knife","Messer"],
+    [42,"make-up","Make-up"],[42,"most of them","die meisten von ihnen"],[42,"one by one","einzeln, einer nach dem anderen"],
+    [42,"shake","schütteln"],[42,"spoon","Löffel"],[42,"stand","stehen; sich (hin)stellen"],
+    [42,"stick sth. into sth.","etwas in etwas stechen, stecken"],[42,"sunglasses","(eine) Sonnenbrille"],
+    [42,"teaspoon","Teelöffel"],[42,"wish","wünschen"],[42,"I wish I was there.","Ich wünschte, ich wäre da."],
+    [164,"worse","schlechter, schlimmer"],[164,"worst","der/die/das schlechteste, schlimmste"]
+  ];
+  const vGroup=p=>p<=31?11:p<=35?12:p<=39?13:14;
+  const VQ=V.map(([p,en,de],i)=>({g:vGroup(p),id:"v"+i,v:{p,en,de}}));
+
+  // Multiple Choice: o[0] ist richtig (wird gemischt). Eintippen: t:1, c = Hinweis, a = erlaubte Antworten
+  const Q = [
+    // 1 -er / -est
+    {g:1,q:"An elephant is ___ than a dog.",o:["bigger","biger","more big","biggest"],e:"big → <b>bigger</b>: kurzer Vokal + ein Konsonant, also g verdoppeln."},
+    {g:1,q:"My brother is ___ than me.",o:["older","more old","oldest"],e:"Zwei Personen vergleichen → <b>older</b> than."},
+    {g:1,q:"Today is ___ than yesterday.",o:["hotter","hoter","more hot"],e:"hot → <b>hotter</b>: das t wird verdoppelt."},
+    {g:1,q:"This is the ___ day of my life!",o:["happiest","happyest","most happy"],e:"happy → <b>happiest</b>: aus y wird i."},
+    {g:1,q:"Maths is ___ than French for me.",o:["easier","easyer","more easy"],e:"easy → <b>easier</b>: aus y wird i."},
+    {g:1,q:"Mount Everest is the ___ mountain in the world.",o:["highest","higher","most high"],e:"Der höchste von allen → <b>the highest</b>."},
+    {g:1,q:"My new bike is ___ than my old one.",o:["faster","more fast","fastest"],e:"fast → <b>faster</b> than."},
+    {g:1,q:"Lisa is the ___ girl in our class.",o:["tallest","taller","most tall"],e:"Die größte von allen → <b>the tallest</b>."},
+    {g:1,q:"Your joke is ___ than my joke.",o:["funnier","funnyer","more funny"],e:"funny → <b>funnier</b>: aus y wird i."},
+    {g:1,q:"This is the ___ T-shirt in the shop.",o:["nicest","niceest","most nice"],e:"nice endet auf -e → nur <b>-st</b>: nicest."},
+    {g:1,lab:"Welche Steigerung ist richtig?",o:["thin – thinner – thinnest","thin – thiner – thinest","thin – more thin – most thin"],e:"thin: kurzer Vokal + n → <b>verdoppeln</b>: thinner, thinnest."},
+    {g:1,t:1,q:"Tom is ___ than Ben.",c:"young",a:["younger"],e:"young → <b>younger</b>."},
+    {g:1,t:1,q:"This is the ___ shop in town.",c:"cheap",a:["cheapest"],e:"cheap → <b>cheapest</b>."},
+    {g:1,t:1,q:"My room is ___ than your room.",c:"big",a:["bigger"],e:"big → <b>bigger</b> (g verdoppeln)."},
+    {g:1,t:1,q:"Your bag is ___ than mine.",c:"heavy",a:["heavier"],e:"heavy → <b>heavier</b> (y → i)."},
+    {g:1,t:1,q:"That was the ___ test ever!",c:"easy",a:["easiest"],e:"easy → <b>easiest</b> (y → i)."},
+    {g:1,t:1,q:"Grandpa is the ___ person in our family.",c:"old",a:["oldest"],e:"old → <b>oldest</b>."},
+    {g:1,t:1,q:"Our new flat is ___ than the old one.",c:"large",a:["larger"],e:"large endet auf -e → nur <b>-r</b>: larger."},
+
+    // 2 more / most
+    {g:2,q:"This book is ___ than the film.",o:["more interesting","interestinger","most interesting"],e:"Langes Adjektiv → <b>more interesting</b> than."},
+    {g:2,q:"Paris is one of the ___ cities in the world.",o:["most beautiful","beautifulest","more beautiful"],e:"Langes Adjektiv, am …sten → <b>the most beautiful</b>."},
+    {g:2,q:"The red jacket is ___ than the blue one.",o:["more expensive","expensiver","most expensive"],e:"<b>more expensive</b> than."},
+    {g:2,q:"Sharks are ___ than dolphins.",o:["more dangerous","dangerouser","most dangerous"],e:"<b>more dangerous</b> than."},
+    {g:2,q:"This is the ___ game I know.",o:["most exciting","excitingest","more exciting"],e:"Das spannendste → <b>the most exciting</b>."},
+    {g:2,q:"Maths is ___ than art.",o:["more difficult","difficulter","most difficult"],e:"<b>more difficult</b> than."},
+    {g:2,q:"Football is the ___ sport in Germany.",o:["most popular","popularest","more popular"],e:"Der beliebteste → <b>the most popular</b>."},
+    {g:2,q:"My new bed is ___ than my old one.",o:["more comfortable","comfortabler","more comfortabler"],e:"<b>more comfortable</b>. Nie more und -er zusammen!"},
+    {g:2,lab:"Welche Steigerung ist richtig?",o:["boring – more boring – most boring","boring – boringer – boringest","boring – more boringer – most boringest"],e:"boring steigert man mit <b>more / most</b>."},
+    {g:2,t:1,q:"This sofa is ___ than the chair.",c:"comfortable",a:["more comfortable"],e:"<b>more comfortable</b>."},
+    {g:2,t:1,q:"She is the ___ singer in the world.",c:"famous",a:["most famous"],e:"<b>the most famous</b>: famous steigert man mit more / most."},
+    {g:2,t:1,q:"Homework is ___ than computer games.",c:"boring",a:["more boring"],e:"<b>more boring</b>."},
+    {g:2,t:1,q:"Sleep is the ___ thing before a test.",c:"important",a:["most important"],e:"<b>the most important</b>."},
+    {g:2,t:1,q:"This museum is ___ than the zoo.",c:"interesting",a:["more interesting"],e:"<b>more interesting</b>."},
+
+    // 3 unregelmäßig
+    {g:3,q:"My mark is good, but your mark is ___.",o:["better","gooder","best","more good"],e:"good → <b>better</b> → best."},
+    {g:3,q:"This is the ___ pizza in town!",o:["best","better","goodest"],e:"Die beste → <b>the best</b>."},
+    {g:3,q:"The weather today is ___ than yesterday.",o:["worse","badder","worst"],e:"bad → <b>worse</b> → worst."},
+    {g:3,q:"That was the ___ film ever.",o:["worst","worse","baddest"],e:"Der schlechteste → <b>the worst</b>."},
+    {g:3,q:"I have got ___ friends than my brother.",o:["more","manier","most"],e:"many → <b>more</b> → most."},
+    {g:3,q:"Who has got the ___ money?",o:["most","more","muchest"],e:"much → more → <b>most</b>."},
+    {g:3,q:"I have got ___ time than you.",o:["less","littler","least"],e:"little → <b>less</b> → least."},
+    {g:3,q:"The station is ___ away than the shop.",o:["farther","farer","more far"],e:"far → <b>farther</b> (auch: further)."},
+    {g:3,lab:"Welche Steigerung ist richtig?",o:["good – better – best","good – gooder – goodest","good – better – betterest"],e:"<b>good – better – best</b> muss man auswendig lernen."},
+    {g:3,t:1,q:"My cold is ___ today than yesterday.",c:"bad",a:["worse"],e:"bad → <b>worse</b>."},
+    {g:3,t:1,q:"You are my ___ friend.",c:"good",a:["best"],e:"good → better → <b>best</b>."},
+    {g:3,t:1,q:"I think summer is ___ than winter.",c:"good",a:["better"],e:"good → <b>better</b>."},
+    {g:3,t:1,q:"That was the ___ day of my holidays.",c:"bad",a:["worst"],e:"bad → worse → <b>worst</b>."},
+
+    // 4 Vergleiche
+    {g:4,q:"My brother is taller ___ me.",o:["than","as","then"],e:"Ungleich vergleichen → <b>than</b> (als). Then heißt dann!"},
+    {g:4,q:"I am as tall ___ my sister.",o:["as","than","like"],e:"Gleich → <b>as</b> tall <b>as</b>."},
+    {g:4,q:"Ben isn't ___ fast as Tom.",o:["as","than","more"],e:"Nicht gleich → <b>not as</b> fast <b>as</b>."},
+    {g:4,q:"A cat is ___ a horse.",o:["smaller than","smaller as","more small than"],e:"<b>smaller than</b>."},
+    {g:4,q:"My dog is as ___ as your dog.",o:["big","bigger","biggest"],e:"Bei <b>as … as</b> steht die Grundform."},
+    {g:4,q:"Anna is ___ girl in the class.",o:["the tallest","tallest","the taller"],e:"Am …sten: immer mit <b>the</b>."},
+    {g:4,q:"Lisa is the best player ___ our team.",o:["in","of","than"],e:"Die beste <b>in</b> der Mannschaft → in our team."},
+    {g:4,lab:"Tom ist 1,50 m groß, Ben auch. Welcher Satz stimmt?",o:["Tom is as tall as Ben.","Tom is taller than Ben.","Tom is the tallest."],e:"Gleich groß → <b>as tall as</b>."},
+    {g:4,lab:"Mia ist 12, Leo ist 10. Welcher Satz stimmt?",o:["Leo isn't as old as Mia.","Leo is older than Mia.","Leo is as old as Mia."],e:"Leo ist jünger → er ist <b>not as old as</b> Mia."},
+    {g:4,t:1,q:"My bag is ___ your bag.",c:"heavy / than",a:["heavier than"],e:"<b>heavier than</b>."},
+    {g:4,t:1,q:"This book is ___ that book.",c:"as / good / as",a:["as good as"],e:"<b>as good as</b>: Grundform zwischen as und as."},
+    {g:4,t:1,q:"Mount Everest is ___ mountain in the world.",c:"high",a:["the highest"],e:"<b>the highest</b>, the nicht vergessen."},
+    {g:4,t:1,q:"This test is ___ the last one.",c:"difficult / than",a:["more difficult than"],e:"<b>more difficult than</b>."}
+  ];
+  Q.forEach((q,i)=>q.id="q"+i);
+  const ALL=Q.concat(VQ);
+
+  // Vokabel-Aufgabe für diese Runde zusammenstellen
+  const variants=en=>{
+    const base=en.replace(/…|\.\.\./g," ");
+    const set=new Set([base, base.replace(/\([^)]*\)/g," "), base.replace(/[()]/g," ")]);
+    [...set].forEach(s=>set.add(s.replace(/\b(sth|sb)\./g," ")));
+    return [...set].map(s=>s.replace(/\s+/g," ").trim()).filter(Boolean);
+  };
+  function prepVocab(c){
+    const {en,de,p}=c.v;
+    const modes=["en2de","de2en"]; if(settings.type) modes.push("type","type");
+    c.mode=modes[Math.floor(Math.random()*modes.length)];
+    c.e=`<b>${esc(en)}</b> = ${esc(de)} <span style="color:var(--dim)">(S. ${p})</span>`;
+    delete c.o; delete c.a; c.t=0; c.c="";
+    if(c.mode==="type"){
+      c.t=1; c.lab="Schreib das englische Wort"; c.q=de; c.a=[en].concat(variants(en));
+      return;
+    }
+    const same=VQ.filter(x=>x!==c&&x.v.de!==de&&x.v.en!==en);
+    const near=shuffle(same.filter(x=>x.g===c.g)).concat(shuffle(same.filter(x=>x.g!==c.g)));
+    const others=near.slice(0,3).map(x=>x.v);
+    if(c.mode==="en2de"){c.lab="Was heißt das auf Deutsch?"; c.q=en; c.o=[de].concat(others.map(x=>x.de))}
+    else{c.lab="Was heißt das auf Englisch?"; c.q=de; c.o=[en].concat(others.map(x=>x.en))}
+  }
+
+  const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+  const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+  let stats=load("sv-stats",{});
+  let settings=load("sv-settings",{groups:[1,2,3,4],n:10,type:true});
+  if(!settings.vo){settings.groups=settings.groups.filter(id=>id<10).concat([11,12,13,14]); settings.vo=1; save("sv-settings",settings)}
+  let best=load("sv-best",0);
+
+  const $=id=>document.getElementById(id);
+  const screens={start:$("s-start"),quiz:$("s-quiz"),end:$("s-end")};
+  const show=n=>{for(const k in screens) screens[k].hidden=k!==n; window.scrollTo(0,0)};
+  const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const grp=id=>GROUPS.find(g=>g.id===id);
+  const secName={st:"Steigerung",vo:"Vokabeln"};
+
+  const tick='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E3A2F" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+  const chips=sec=>GROUPS.filter(g=>g.sec===sec).map(g=>{
+    const n=ALL.filter(q=>q.g===g.id).length;
+    return `<label class="chip"><input type="checkbox" id="g${g.id}" value="${g.id}"><span class="box">${tick}</span>
+      <span class="txt"><span class="t">${esc(g.t)} · ${n}</span><span class="s">${esc(g.s)}</span></span></label>`;
+  }).join("");
+  $("groups-st").innerHTML=chips("st");
+  $("groups-vo").innerHTML=chips("vo");
+  $("vo-soon").hidden=GROUPS.some(g=>g.sec==="vo");
+  GROUPS.forEach(g=>{$("g"+g.id).checked=settings.groups.includes(g.id)});
+  document.querySelectorAll(".group-list").forEach(el=>el.addEventListener("change",()=>{
+    settings.groups=GROUPS.map(g=>g.id).filter(id=>$("g"+id).checked); save("sv-settings",settings); refreshStart();
+  }));
+  $("seg").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b) return; settings.n=+b.dataset.n; save("sv-settings",settings); refreshStart()});
+  $("seg-type").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b) return; settings.type=b.dataset.type==="1"; save("sv-settings",settings); refreshStart()});
+
+  const pool=()=>ALL.filter(q=>settings.groups.includes(q.g)&&(q.v||settings.type||!q.t));
+  const hardOnes=()=>ALL.filter(q=>{const s=stats[q.id];return s&&s.w>s.r&&(q.v||settings.type||!q.t)});
+  function refreshStart(){
+    [...$("seg").children].forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.n===settings.n)));
+    [...$("seg-type").children].forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.type==="1")===settings.type)));
+    $("best-pill").textContent="Rekord ★ "+best;
+    const p=pool().length;
+    $("go").disabled=p===0; $("go").textContent=p?"Los geht's":"Bitte ein Thema wählen";
+    const h=hardOnes().length; $("go-hard").hidden=!h; $("go-hard").textContent=`Meine schwierigen Aufgaben üben (${h})`;
+  }
+
+  let round=[],idx=0,right=0,streak=0,mistakes=[],answered=false,cur=null;
+  function start(list){
+    if(!list.length) return;
+    round=list; idx=0; right=0; streak=0; mistakes=[];
+    show("quiz"); render();
+  }
+  $("go").addEventListener("click",()=>{let l=shuffle(pool()); if(settings.n) l=l.slice(0,settings.n); start(l)});
+  $("go-hard").addEventListener("click",()=>start(shuffle(hardOnes())));
+  $("again").addEventListener("click",()=>{stopAuto();show("start");refreshStart()});
+  $("again-wrong").addEventListener("click",()=>start(shuffle(mistakes)));
+
+  const sentHTML=(q,fill,cls)=>esc(q.q).replace("___",fill?`<span class="gap ${cls}">${esc(fill)}</span>`:'<span class="gap">&nbsp;</span>');
+
+  function render(){
+    cur=round[idx]; answered=false;
+    if(cur.v) prepVocab(cur);
+    const g=grp(cur.g);
+    $("hint").textContent=cur.v?"Tipp anzeigen":"Regel anzeigen";
+    $("quiz-title").textContent=secName[g.sec];
+    $("round-name").textContent=g.t;
+    $("count").textContent=`${idx+1} / ${round.length}`;
+    $("bar").style.width=(idx/round.length*100)+"%";
+    $("streak").textContent=`★ ${streak} in Folge`;
+    $("fb").hidden=true; $("tip").hidden=true; $("hint").hidden=!!(cur.v&&cur.mode==="en2de");
+    $("fix").hidden=true; $("field").className="field";
+    if(!cur.t){
+      $("q-label").textContent=cur.lab||"Setze ein";
+      $("sent").hidden=!cur.q; if(cur.q) $("sent").innerHTML=sentHTML(cur);
+      $("field").hidden=true; $("opts").hidden=false;
+      const opts=shuffle(cur.o.map((v,i)=>({v,ok:i===0})));
+      $("opts").innerHTML=opts.map((o,i)=>`<button type="button" class="opt" data-ok="${o.ok?1:0}"><span class="k">${"ABCD"[i]}</span><span class="v">${esc(o.v)}</span></button>`).join("");
+      $("main").hidden=true;
+    }else{
+      $("opts").hidden=true; $("opts").innerHTML=""; $("field").hidden=false; $("sent").hidden=false;
+      $("main").hidden=false; $("main").textContent="Prüfen";
+      $("q-label").textContent=cur.lab||"Schreib die richtige Form";
+      $("sent").innerHTML=sentHTML(cur)+(cur.c?` <span class="cuehint">(${esc(cur.c)})</span>`:"");
+      $("answer-label").textContent=cur.v?"Auf Englisch":"Was gehört in die Lücke?";
+      $("answer").value=""; $("answer").disabled=false;
+      setTimeout(()=>{try{$("answer").focus({preventScroll:true})}catch(e){}},50);
+    }
+  }
+
+  const norm=s=>s.toLowerCase().replace(/[’‘`´]/g,"'").replace(/[.?!,]/g," ").replace(/\s+/g," ").trim();
+
+  function finish(ok,shown){
+    answered=true;
+    const s=stats[cur.id]||{r:0,w:0}; ok?s.r++:s.w++; stats[cur.id]=s; save("sv-stats",stats);
+    if(ok){right++;streak++; if(streak>best){best=streak;save("sv-best",best)}}
+    else{streak=0; mistakes.push(cur); $("card").classList.remove("wiggle"); void $("card").offsetWidth; $("card").classList.add("wiggle")}
+    $("streak").textContent=`★ ${streak} in Folge`;
+    const praise=["Super!","Genau!","Richtig!","Stark!","Perfekt!"];
+    $("fb").className="fb "+(ok?"ok":"no");
+    $("fb").innerHTML=`<span class="verdict">${ok?praise[Math.floor(Math.random()*praise.length)]:"Nicht ganz."}</span>${cur.e}`;
+    $("fb").hidden=false; $("tip").hidden=true; $("hint").hidden=true;
+    if(cur.q&&cur.q.includes("___")) $("sent").innerHTML=sentHTML(cur,shown,ok?"ok":"no")+(cur.c?` <span class="cuehint">(${esc(cur.c)})</span>`:"");
+    $("main").hidden=false;
+    $("main").focus({preventScroll:true});
+    startAuto(ok?2:5);
+  }
+
+  // Automatisch weiter: richtig nach 2 s, falsch nach 5 s; Tippen auf den Knopf geht sofort weiter
+  let autoT=null;
+  function stopAuto(){if(autoT){clearInterval(autoT);autoT=null}}
+  function startAuto(sec){
+    stopAuto();
+    const label=idx+1<round.length?"Weiter":"Ergebnis ansehen";
+    let left=sec;
+    const paint=()=>{$("main").textContent=`${label} (${left})`};
+    paint();
+    autoT=setInterval(()=>{
+      left--;
+      if(left<=0){stopAuto(); if(answered&&!screens.quiz.hidden) next()}
+      else paint();
+    },1000);
+  }
+  function next(){
+    stopAuto();
+    idx++; if(idx<round.length) render(); else end();
+  }
+
+  $("opts").addEventListener("click",e=>{
+    const b=e.target.closest(".opt"); if(!b||answered) return;
+    const ok=b.dataset.ok==="1";
+    [...$("opts").children].forEach(x=>{x.disabled=true;
+      if(x.dataset.ok==="1") x.classList.add("right"); else if(x!==b) x.classList.add("fade");});
+    if(!ok) b.classList.add("wrong");
+    finish(ok,cur.o[0]);
+  });
+
+  function checkTyped(){
+    const v=$("answer").value; if(!v.trim()){$("answer").focus();return}
+    const ok=cur.a.some(a=>norm(a)===norm(v));
+    $("answer").disabled=true;
+    $("field").className="field "+(ok?"ok":"no");
+    if(!ok){$("fix").textContent=cur.a[0]; $("fix").hidden=false}
+    finish(ok,cur.a[0]);
+  }
+  $("main").addEventListener("click",()=>{
+    if(!answered){checkTyped();return}
+    next();
+  });
+  $("answer").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault(); if(!answered) checkTyped()}});
+  document.addEventListener("keydown",e=>{
+    if(screens.quiz.hidden) return;
+    if(answered&&e.key==="Enter"&&document.activeElement!==$("main")){e.preventDefault();$("main").click();return}
+    if(!answered&&!cur.t){const i="1234abcd".indexOf(e.key.toLowerCase())%4; const b=$("opts").children[i]; if(i>=0&&b) b.click()}
+  });
+  $("hint").addEventListener("click",()=>{
+    if(cur.v){
+      const en=cur.v.en, words=en.split(" ").length;
+      $("tip").innerHTML=`Das englische Wort beginnt mit <b>${esc(en.charAt(0))}</b>`+(words>1?` und hat <b>${words}</b> Wörter.`:` und hat <b>${en.replace(/[^A-Za-z]/g,"").length}</b> Buchstaben.`);
+      $("tip").hidden=false; return;
+    }
+    const g=grp(cur.g);
+    $("tip").innerHTML=`${g.tip}<br><span class="ex">${esc(g.ex)}</span>`; $("tip").hidden=false;
+  });
+
+  function end(){
+    $("bar").style.width="100%";
+    show("end");
+    $("end-score").textContent=`${right} / ${round.length}`;
+    const r=right/round.length;
+    $("end-text").textContent=r===1?"alles richtig, klasse!":r>=.8?"richtig, sehr gut!":r>=.5?"richtig, weiter so!":"richtig, übe die Fehler nochmal";
+    $("end-streak").textContent="Rekord ★ "+best;
+    $("mist-label").hidden=!mistakes.length; $("again-wrong").hidden=!mistakes.length;
+    $("mist").innerHTML=mistakes.map(q=>{
+      if(q.v) return `<li><span class="forms"><em>${esc(q.v.en)}</em> – ${esc(q.v.de)}</span><span class="de">${esc(grp(q.g).t)}</span></li>`;
+      const a=q.t?q.a[0]:q.o[0];
+      const line=q.q&&q.q.includes("___")?esc(q.q).replace("___",`<em>${esc(a)}</em>`):`<em>${esc(a)}</em>`;
+      return `<li><span class="forms">${line}</span><span class="de">${esc(grp(q.g).t)}</span></li>`;
+    }).join("");
+  }
+
+  refreshStart();
+}
+</script>
+</body></html>
